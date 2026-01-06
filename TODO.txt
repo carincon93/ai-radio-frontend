@@ -1,0 +1,16 @@
+TODO:
+
+
+1. Select the genre [x]
+        |
+2. Create a session by day [x]
+        |
+3. Load queue with genre tracks [x]
+        |
+4. Load each segment with 4 tracks []
+        |
+5. Play radio []
+        |
+6. (When each segment begins, the DJ's introduction should be played) []
+        |
+7. In the middle segment, the DJ should speak. (The song should be played after the DJ speak) 
