@@ -5,17 +5,17 @@ class AppStore {
     constructor() {
         this.ravvitfyApi = new RavvitfyApi();
 
-        // state
+        // State
         this.genres = [];
         this.tracks = [];
-        this.currentTrackId = null;
+        this.currentTrack = null;
         this.currentGenreId = null;
         this.djSession = null;
         this.isPlaying = false;
 
         this.loadingPromise = null;
 
-        // event bus
+        // Event bus
         this.listeners = new Map();
     }
 
@@ -37,12 +37,12 @@ class AppStore {
 
     hydrate() {
         this.currentGenreId = localStorage.getItem('currentGenreId');
-        this.currentTrackId = localStorage.getItem('currentTrackId');
+        this.currentTrack = localStorage.getItem('currentTrack');
     }
 
     persist() {
         localStorage.setItem('currentGenreId', this.currentGenreId);
-        localStorage.setItem('currentTrackId', this.currentTrackId);
+        localStorage.setItem('currentTrack', this.currentTrack);
     }
 
 
@@ -67,14 +67,15 @@ class AppStore {
 
     setCurrentGenre(genreId) {
         this.currentGenreId = genreId;
+        this.getDJSessionByGenre();
 
         this.emit('genre:change', genreId);
     }
 
-    setCurrentTrack(trackId) {
-        this.currentTrackId = trackId;
+    setCurrentTrack(track) {
+        this.currentTrack = track;
 
-        this.emit('track:change', trackId);
+        this.emit('track:change', track);
     }
 
     setPlaying(isPlaying) {
@@ -86,6 +87,13 @@ class AppStore {
         if (!this.currentGenreId) return;
 
         this.djSession = await this.ravvitfyApi.getSessionByGenre(this.currentGenreId);
+        this.tracks = flattenSegments(this.djSession.djSegments);
+
+        this.emit('playlist:loaded', this.tracks);
+    }
+
+    async createSession(genreId) {
+        this.djSession = await this.ravvitfyApi.createSession(genreId);
         this.tracks = flattenSegments(this.djSession.djSegments);
 
         this.emit('playlist:loaded', this.tracks);
