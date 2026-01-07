@@ -1,6 +1,7 @@
 import { Component } from '../core/Component.js';
 import { audioPlayer } from '../core/AudioPlayer.js';
 import { appStore } from "../store/AppStore";
+import { storage } from "../store/storage";
 
 import { GenAI } from '../api/genai.js';
 
@@ -12,7 +13,8 @@ export class Player extends Component {
         super(props);
 
         this.state = {
-            isPlaying: false
+            isPlaying: false,
+            isPaused: false
         };
         this.playlist = null;
         this.nowPlaying = null;
@@ -26,7 +28,6 @@ export class Player extends Component {
      * Init...
     */
     onInit() {
-        this.bootstrap();
         this.appStore.hydrate();
 
         this.playlist = new Playlist();
@@ -55,19 +56,36 @@ export class Player extends Component {
             ?.addEventListener('click', () => this.play());
     }
 
-    async bootstrap() {
-        await this.appStore.init();
-    }
-
     /**
      * Start the playlist
      */
     async play() {
-        this.appStore.isPlaying = true;
+        if (this.state.isPlaying) {
+            console.log("Enter 1");
+            this.audioPlayer.pause();
+            this.setState({
+                isPlaying: false,
+                isPaused: true
+            });
+            this.appStore.setPlaying(false);
+            return;
+        } else if (this.state.isPaused) {
+            console.log("Enter 2");
+            this.audioPlayer.play();
+            this.setState({
+                isPlaying: true,
+                isPaused: false
+            });
+            this.appStore.setPlaying(true);
+            return;
+        }
+
+        console.log(this.state);
+
         this.setState({ isPlaying: true });
-        this.audioPlayer.playIndex(2);
-        this.appStore.setCurrentTrack("dasdasdasdasd");
-        console.log(this.appStore.tracks);
+        this.appStore.setPlaying(true);
+        const currentTrack = storage.get("currentTrack");
+        this.audioPlayer.playIndex(currentTrack?.index || 0);
     }
 
     render() {
