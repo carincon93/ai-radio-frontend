@@ -14,8 +14,8 @@ export class RavvitfyApi {
             }
         });
 
-        if (!response.ok) {
-            throw new Error('Failed to get session');
+        if (response.status === 404) {
+            return [];
         }
 
         const data = await response.json();
