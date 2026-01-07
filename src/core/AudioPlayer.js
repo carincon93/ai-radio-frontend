@@ -1,4 +1,5 @@
 import { config } from '../config/config.js';
+import { appStore } from '../store/AppStore.js';
 
 class AudioPlayer {
     constructor() {
@@ -7,17 +8,18 @@ class AudioPlayer {
         this.queue = [];
         this.listeners = new Set();
         this.currentIndex = 0;
+        this.appStore = appStore;
 
         this.audio.addEventListener('ended', () => {
             this.next();
         });
 
         this.audio.addEventListener('play', () => {
-            this.emit('play');
+            this.appStore.setPlaying(true);
         });
 
         this.audio.addEventListener('pause', () => {
-            this.emit('pause');
+            this.appStore.setPlaying(false);
         });
     }
 
@@ -35,15 +37,11 @@ class AudioPlayer {
         this.audio.src = `${this.config.API_URL}/uploads/${track.audioUrl}`;
         this.audio.play();
 
-        this.emit('trackChange', track, index, track.segmentIndex);
+        this.appStore.setCurrentTrack(track);
     }
 
     play() {
-        if (this.currentIndex === 0) {
-            this.playIndex(0);
-        } else {
-            this.audio.play();
-        }
+        this.audio.play();
     }
 
     pause() {
@@ -78,28 +76,7 @@ class AudioPlayer {
         if (nextIndex < this.queue.length) {
             this.playIndex(nextIndex);
         } else {
-            this.emit('queueEnded');
-        }
-    }
-
-    on(event, cb) {
-        this.listeners.add({ event, cb });
-    }
-
-    off(event, cb) {
-        for (const l of this.listeners) {
-            if (l.event === event && l.cb === cb) {
-                this.listeners.delete(l);
-                break;
-            }
-        }
-    }
-
-    emit(event, ...args) {
-        for (const l of this.listeners) {
-            if (l.event === event) {
-                l.cb(...args);
-            }
+            // this.emit('queueEnded');
         }
     }
 }
