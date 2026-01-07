@@ -10,10 +10,15 @@ export class Playlist extends Component {
             genres: [],
             tracks: [],
             currentGenreId: null,
-            currentTrackId: null
+            currentTrack: null
         }
         this.appStore = appStore;
         this.audioPlayer = audioPlayer;
+
+        // Bind methods to preserve 'this' context
+        this.onTrackChange = this.onTrackChange.bind(this);
+        this.onGenreChange = this.onGenreChange.bind(this);
+        this.onPlaylistLoaded = this.onPlaylistLoaded.bind(this);
     }
 
     onInit() {
@@ -22,6 +27,7 @@ export class Playlist extends Component {
         // Listening to incoming events
         this.appStore.on('track:change', this.onTrackChange);
         this.appStore.on('genre:change', this.onGenreChange);
+        this.appStore.on('playlist:loaded', this.onPlaylistLoaded);
     }
 
     afterMount() {
@@ -31,31 +37,39 @@ export class Playlist extends Component {
     bindEvents() {
         this.$('#genre-select')
             ?.addEventListener('change', () => this.handleGenreChange())
+
+        this.$('#create-session-btn')
+            ?.addEventListener('click', () => this.createSession())
     }
 
-    onTrackChange = (trackId) => {
-        this.setState({ currentTrackId: trackId });
+    onTrackChange = (track) => {
+        this.setState({ currentTrack: track });
     }
 
     onGenreChange = async (genreId) => {
         this.setState({ currentGenreId: genreId });
-        await this.getTracks();
+    }
+
+    onPlaylistLoaded() {
+        this.setState({ tracks: this.appStore.tracks });
+
+        // Load tracks into the player queue
+        this.audioPlayer.loadQueue(this.state.tracks);
     }
 
     async handleGenreChange() {
         this.setState({ currentGenreId: this.$('#genre-select').value });
+
+        // Remove the current track from the local storage
+        storage.remove("currentTrack");
         // Set the current genre ID into the appStore
         this.appStore.setCurrentGenre(this.state.currentGenreId);
         // Storage the current genre ID into the local storage
         storage.set("currentGenreId", this.state.currentGenreId);
     }
 
-    async getTracks() {
-        await this.appStore.getDJSessionByGenre();
-        this.setState({ tracks: this.appStore.tracks });
-
-        // Load tracks into the player queue
-        this.audioPlayer.loadQueue(this.state.tracks);
+    createSession() {
+        this.appStore.createSession(this.state.currentGenreId);
     }
 
     async bootstrap() {
@@ -76,7 +90,7 @@ export class Playlist extends Component {
     render() {
         return `
             <div class="playlist">
-                This is my playlist. ${this.state.currentTrackId}
+                This is my playlist.
 
                 <select id="genre-select">
                     <option value="">Select a genre</option>
@@ -86,12 +100,17 @@ export class Playlist extends Component {
                 </select>
 
                 <div class="playlist-container">
-                    ${this.state.tracks.length > 0 && `
+                    ${this.state.tracks.length > 0 ? `
                         <ul>
                             ${this.state.tracks.map(({ id, name }) => `
-                                <li>${name}</li>    
+                                <li style="${this.state.currentTrack?.id === id ? 'background-color: red' : ''}">${name}</li>    
                             `).join('')}
                         </ul>    
+                    ` : `
+                        <div>
+                            <p>No tracks found</p>
+                            <button id="create-session-btn">Create session</button>
+                        </div>
                     `}
                 </div>
             </div>
