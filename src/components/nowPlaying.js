@@ -1,78 +1,29 @@
 import { Component } from "../core/Component";
 import { appStore } from "../store/AppStore";
-
-export class NowPlaying extends Component {
-    constructor() {
-        super();
-
-        this.appStore = appStore;
-    }
-
-    onInit() {
-        this.bootsrap();
-
-        console.log(this.appStore.isPlaying);
-    }
-
-    async bootsrap() {
-        await this.appStore.init();
-    }
-
-
-    render() {
-        return `
-            <div class="now-playing">
-                Now playing
-            </div>
-        `;
-    }
-}
-
-
-/**
- * 
- * import { audioPlayer } from '../core/AudioPlayer.js';
-import { Component } from '../core/Component.js';
-
-import { Gemini } from '../api/gemini.js';
+import { storage } from "../store/storage";
+import { audioPlayer } from "../core/AudioPlayer";
 
 export class NowPlaying extends Component {
     constructor(props = {}) {
         super(props);
+
         this.state = {
-            segmentIndex: null,
             track: null,
-            index: 0,
-            currentIndex: null
+            isPlaying: false
         };
-        this.gemini = new Gemini();
+
+        this.appStore = appStore;
         this.audioPlayer = audioPlayer;
+
+        // Bind methods to preserve 'this' context
+        this.onPlayerStateChange = this.onPlayerStateChange.bind(this);
+        this.onTrackChange = this.onTrackChange.bind(this);
     }
 
     onInit() {
-        // Store listener for cleanup
-        this._trackListener = (track, index, segmentIndex) => {
-            // Check the next track values
-            const nextTrack = this.audioPlayer.queue[index + 1];
-            if (!nextTrack) return;
-
-            const currentSegmentIndex = localStorage.getItem("segmentIndex");
-
-            if (currentSegmentIndex !== nextTrack.segmentIndex) {
-                
-            }
-
-            const segmentIntro = JSON.parse(localStorage.getItem("intro"));
-            if (!segmentIntro.played) {
-                this.gemini.play(segmentIntro.intro);
-            }
-
-            localStorage.setItem("segmentIndex", nextTrack.segmentIndex);
-
-            this.setState({ track, index, segmentIndex });
-        };
-
-        this.audioPlayer.on('trackChange', this._trackListener);
+        // Listening to incoming events
+        this.appStore.on('player:state', this.onPlayerStateChange);
+        this.appStore.on('track:change', this.onTrackChange);
     }
 
     afterMount() {
@@ -80,42 +31,29 @@ export class NowPlaying extends Component {
     }
 
     bindEvents() {
-        if (!this.$("#next-track")) return;
-        this.$("#next-track").addEventListener("click", () => this.audioPlayer.next());
+        this.$("#next-track")
+            ?.addEventListener("click", () => this.audioPlayer.next());
     }
 
-    destroy() {
-        if (this._trackListener) {
-            this.audioPlayer.off('trackChange', this._trackListener);
-        }
-        super.destroy();
+    onPlayerStateChange() {
+        this.setState({ isPlaying: this.appStore.isPlaying });
     }
 
-    async playSegmentDJIntro() {
-        const currentTrack = this.audioPlayer.queue[this.audioPlayer.currentIndex];
-        const currentSegment = this.audioPlayer.queue.filter(track => track.segmentIndex === currentTrack.segmentIndex);
-
-        // For each session, we generate the intro dj audio
-
-        // const introScript = await this.gemini.generateScript(introPrompt);
-        // const introAudio = await this.gemini.generateAudio(introScript);
-
-        // await this.gemini.play();
+    onTrackChange(track) {
+        this.setState({ track });
+        storage.set("currentTrack", track);
     }
 
     render() {
-        if (!this.state.track) {
-            return `<div class="now-playing">Nothing playing</div>`;
-        }
-
         return `
             <div class="now-playing">
+                ${this.state.isPlaying ? 'Now playing' : 'Stopped'}
+                ${this.state.track ? `
+                    <strong>${this.state.track?.name}</strong><br>
+                    <span>${this.state.track?.artistName}</span><br>
+                ` : ''}
                 <button id="next-track">Next track</button>
-                <strong>${this.state.track.name}</strong><br>
-                <span>${this.state.track.artist.name}</span><br>
             </div>
         `;
     }
 }
-
- */
