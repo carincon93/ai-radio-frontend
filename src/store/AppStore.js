@@ -10,6 +10,7 @@ class AppStore {
         this.tracks = [];
         this.currentTrack = null;
         this.currentGenreId = null;
+        this.currentSegmentIndex = null;
         this.djSession = null;
         this.isPlaying = false;
 
@@ -73,7 +74,23 @@ class AppStore {
     }
 
     setCurrentTrack(track) {
+        // Get previous segment index 
+        const previousSegmentIndex = this.currentSegmentIndex;
+
         this.currentTrack = track;
+
+        // Get current segment index
+        this.currentSegmentIndex = track.segmentIndex;
+
+        // Get next segment index
+        const nextSegmentIndex = this.tracks[track.index + 1]?.segmentIndex;
+
+        if (this.currentSegmentIndex !== nextSegmentIndex) {
+            this.emit('segment:started', {
+                segmentIndex: this.currentSegmentIndex,
+                nextSegmentTracks: this.tracks.filter(track => track.segmentIndex === nextSegmentIndex)
+            });
+        }
 
         this.emit('track:change', track);
     }
