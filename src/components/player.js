@@ -1,7 +1,7 @@
 import { Component } from '../core/Component.js';
 import { audioPlayer } from '../core/AudioPlayer.js';
-import { appStore } from "../store/AppStore";
-import { storage } from "../store/storage";
+import { appStore } from "../store/AppStore.js";
+import { storage } from "../store/storage.js";
 
 import { GenAI } from '../api/genai.js';
 
@@ -9,8 +9,8 @@ import { Playlist } from './playlist.js';
 import { NowPlaying } from './nowPlaying.js';
 
 export class Player extends Component {
-    constructor(props = {}) {
-        super(props);
+    constructor() {
+        super();
 
         this.state = {
             isPlaying: false,
@@ -22,6 +22,9 @@ export class Player extends Component {
         this.gemini = new GenAI();
         this.audioPlayer = audioPlayer;
         this.appStore = appStore;
+
+        this.onPlayerStateChange = this.onPlayerStateChange.bind(this);
+        this.onSegmentStarted = this.onSegmentStarted.bind(this);
     }
 
     /** 
@@ -30,8 +33,15 @@ export class Player extends Component {
     onInit() {
         this.appStore.hydrate();
 
-        this.playlist = new Playlist();
-        this.nowPlaying = new NowPlaying();
+        this.playlist = new Playlist({ appStore: this.appStore });
+        this.nowPlaying = new NowPlaying({ appStore: this.appStore });
+
+        this.appStore.on('player:state', async (isPlaying) => {
+            this.onPlayerStateChange(isPlaying);
+        });
+        this.appStore.on('segment:started', async (segment) => {
+            this.onSegmentStarted(segment);
+        });
     }
 
     /**
@@ -56,36 +66,43 @@ export class Player extends Component {
             ?.addEventListener('click', () => this.play());
     }
 
+    onPlayerStateChange(isPlaying) {
+        this.setState({ isPlaying });
+    }
+
+    onSegmentStarted(segment) {
+        console.log("Segment started", segment);
+        // this.nowPlaying.setSegment(segment);
+    }
+
     /**
      * Start the playlist
      */
     async play() {
+        // if (!this.appStore.currentSegmentIndex) return;
+
         if (this.state.isPlaying) {
-            console.log("Enter 1");
             this.audioPlayer.pause();
             this.setState({
                 isPlaying: false,
                 isPaused: true
             });
-            this.appStore.setPlaying(false);
             return;
         } else if (this.state.isPaused) {
-            console.log("Enter 2");
             this.audioPlayer.play();
             this.setState({
                 isPlaying: true,
                 isPaused: false
             });
-            this.appStore.setPlaying(true);
             return;
         }
 
-        console.log(this.state);
-
         this.setState({ isPlaying: true });
-        this.appStore.setPlaying(true);
+
+        // If reload, play from the same track, else play from the first track
         const currentTrack = storage.get("currentTrack");
-        this.audioPlayer.playIndex(currentTrack?.index || 0);
+        this.audioPlayer.setCurrentIndex(currentTrack?.index || 0);
+        this.audioPlayer.playIndex();
     }
 
     render() {

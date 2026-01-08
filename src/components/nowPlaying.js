@@ -1,11 +1,10 @@
-import { Component } from "../core/Component";
-import { appStore } from "../store/AppStore";
-import { storage } from "../store/storage";
-import { audioPlayer } from "../core/AudioPlayer";
+import { Component } from "../core/Component.js";
+import { audioPlayer } from "../core/AudioPlayer.js";
+import { storage } from "../store/storage.js";
 
 export class NowPlaying extends Component {
-    constructor(props = {}) {
-        super(props);
+    constructor({ appStore }) {
+        super();
 
         this.state = {
             track: null,
@@ -22,8 +21,12 @@ export class NowPlaying extends Component {
 
     onInit() {
         // Listening to incoming events
-        this.appStore.on('player:state', this.onPlayerStateChange);
-        this.appStore.on('track:change', this.onTrackChange);
+        this.appStore.on('player:state', async (isPlaying) => {
+            this.onPlayerStateChange(isPlaying);
+        });
+        this.appStore.on('track:change', async (track) => {
+            this.onTrackChange(track);
+        });
     }
 
     afterMount() {
@@ -35,13 +38,14 @@ export class NowPlaying extends Component {
             ?.addEventListener("click", () => this.audioPlayer.next());
     }
 
-    onPlayerStateChange() {
-        this.setState({ isPlaying: this.appStore.isPlaying });
+    onPlayerStateChange(isPlaying) {
+        this.setState({ isPlaying });
     }
 
     onTrackChange(track) {
         this.setState({ track });
         storage.set("currentTrack", track);
+        storage.set("currentSegmentIndex", this.appStore.currentSegmentIndex);
     }
 
     render() {
