@@ -1,10 +1,9 @@
-import { audioPlayer } from '../core/AudioPlayer';
-import { Component } from '../core/Component';
-import { appStore } from '../store/AppStore';
-import { storage } from '../store/storage';
+import { Component } from '../core/Component.js';
+import { audioPlayer } from '../core/AudioPlayer.js';
+import { storage } from '../store/storage.js';
 
 export class Playlist extends Component {
-    constructor() {
+    constructor({ appStore }) {
         super();
         this.state = {
             genres: [],
@@ -25,51 +24,15 @@ export class Playlist extends Component {
         this.bootstrap();
 
         // Listening to incoming events
-        this.appStore.on('track:change', this.onTrackChange);
-        this.appStore.on('genre:change', this.onGenreChange);
-        this.appStore.on('playlist:loaded', this.onPlaylistLoaded);
-    }
-
-    afterMount() {
-        this.bindEvents();
-    }
-
-    bindEvents() {
-        this.$('#genre-select')
-            ?.addEventListener('change', () => this.handleGenreChange())
-
-        this.$('#create-session-btn')
-            ?.addEventListener('click', () => this.createSession())
-    }
-
-    onTrackChange = (track) => {
-        this.setState({ currentTrack: track });
-    }
-
-    onGenreChange = async (genreId) => {
-        this.setState({ currentGenreId: genreId });
-    }
-
-    onPlaylistLoaded() {
-        this.setState({ tracks: this.appStore.tracks });
-
-        // Load tracks into the player queue
-        this.audioPlayer.loadQueue(this.state.tracks);
-    }
-
-    async handleGenreChange() {
-        this.setState({ currentGenreId: this.$('#genre-select').value });
-
-        // Remove the current track from the local storage
-        storage.remove("currentTrack");
-        // Set the current genre ID into the appStore
-        this.appStore.setCurrentGenre(this.state.currentGenreId);
-        // Storage the current genre ID into the local storage
-        storage.set("currentGenreId", this.state.currentGenreId);
-    }
-
-    createSession() {
-        this.appStore.createSession(this.state.currentGenreId);
+        this.appStore.on('track:change', async (track) =>
+            this.onTrackChange(track)
+        );
+        this.appStore.on('genre:change', async (genreId) =>
+            this.onGenreChange(genreId)
+        );
+        this.appStore.on('playlist:loaded', async (tracks) =>
+            this.onPlaylistLoaded(tracks)
+        );
     }
 
     async bootstrap() {
@@ -86,6 +49,53 @@ export class Playlist extends Component {
             this.appStore.setCurrentGenre(currentGenreIdFromStorage);
         }
     }
+
+    afterMount() {
+        this.bindEvents();
+    }
+
+    bindEvents() {
+        this.$('#genre-select')
+            ?.addEventListener('change', () => this.handleGenreChange())
+
+        this.$('#create-session-btn')
+            ?.addEventListener('click', () => this.createSession())
+    }
+
+    onGenreChange(genreId) {
+        this.setState({ currentGenreId: genreId });
+    }
+
+    onPlaylistLoaded(tracks) {
+        this.setState({ tracks: tracks });
+        const currentTrack = storage.get("currentTrack");
+
+        // Load tracks into the player queue
+        this.audioPlayer.loadQueue(currentTrack?.index, tracks);
+    }
+
+    onTrackChange(track) {
+        this.setState({ currentTrack: track });
+    }
+
+    async handleGenreChange() {
+        this.setState({ currentGenreId: this.$('#genre-select').value });
+
+        // Set the current genre ID into the appStore
+        this.appStore.setCurrentGenre(this.state.currentGenreId);
+
+        // Remove the current track and current segment index from the local storage and set the current genre ID into the local storage
+        storage.remove("currentTrack");
+        storage.remove("currentSegmentIndex");
+        storage.set("currentGenreId", this.state.currentGenreId);
+
+        this.audioPlayer.stop();
+    }
+
+    createSession() {
+        this.appStore.createSession(this.state.currentGenreId);
+    }
+
 
     render() {
         return `
