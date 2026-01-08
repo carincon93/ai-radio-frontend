@@ -7,7 +7,7 @@ class AudioPlayer {
         this.audio = new Audio();
         this.queue = [];
         this.listeners = new Set();
-        this.currentIndex = 0;
+        this.currentTrackIndex = 0;
         this.appStore = appStore;
 
         this.audio.addEventListener('ended', () => {
@@ -23,28 +23,37 @@ class AudioPlayer {
         });
     }
 
-    loadQueue(tracks) {
+    loadQueue(currentTrackIndexFromStorage, tracks) {
         this.queue = tracks;
-        this.currentIndex = 0;
+        this.currentTrackIndex = currentTrackIndexFromStorage || 0;
+
+        const track = this.queue[this.currentTrackIndex];
+
+        this.setCurrentTrack(track);
     }
 
-    playIndex(index) {
-        if (!this.queue[index]) return;
+    playIndex() {
+        if (!this.queue[this.currentTrackIndex]) {
+            this.currentTrackIndex = 0;
+        };
 
-        this.currentIndex = index;
-        const track = this.queue[index];
+        const track = this.queue[this.currentTrackIndex];
 
-        this.audio.src = `${this.config.API_URL}/uploads/${track.audioUrl}`;
+        this.setCurrentTrack(track);
         this.audio.play();
-
-        this.appStore.setCurrentTrack(track);
     }
 
     play() {
         this.audio.play();
+        this.appStore.setPlaying(true);
     }
 
     pause() {
+        this.audio.pause();
+        this.appStore.setPlaying(false);
+    }
+
+    stop() {
         this.audio.pause();
     }
 
@@ -70,14 +79,23 @@ class AudioPlayer {
         fade();
     }
 
-    next() {
-        const nextIndex = this.currentIndex + 1;
+    setCurrentIndex(index) {
+        this.currentTrackIndex = index;
+    }
 
-        if (nextIndex < this.queue.length) {
-            this.playIndex(nextIndex);
-        } else {
-            // this.emit('queueEnded');
-        }
+    setCurrentTrack(track) {
+        this.audio.src = `${this.config.API_URL}/uploads/${track.audioUrl}`;
+        this.appStore.setCurrentTrack(track);
+    }
+
+    next() {
+        this.currentTrackIndex++;
+
+        // if (nextIndex < this.queue.length) {
+        this.playIndex();
+        // } else {
+        // this.stop();
+        // }
     }
 }
 
