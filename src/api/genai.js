@@ -13,6 +13,15 @@ export class GenAI {
         this.isPlaying = false;
     }
 
+    async generateIntroText(prompt) {
+        const transcript = await this.client.models.generateContent({
+            model: this.config.GEMINI_MODEL,
+            contents: prompt,
+        });
+
+        return transcript.candidates?.[0]?.content?.parts?.[0]?.text;
+    }
+
     async generateAudio(prompt) {
         const response = await this.client.models.generateContent({
             model: this.config.TTS_GEMINI_MODEL,
@@ -35,15 +44,6 @@ export class GenAI {
         });
 
         return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-    }
-
-    async generateScript(prompt) {
-        const transcript = await this.client.models.generateContent({
-            model: this.config.GEMINI_MODEL,
-            contents: prompt,
-        });
-
-        return transcript.candidates?.[0]?.content?.parts?.[0]?.text;
     }
 
     async play(audioBase64) {
