@@ -1,46 +1,57 @@
 import { Component } from '../core/Component.js';
-import { audioPlayer } from '../core/AudioPlayer.js';
-import { appStore } from "../store/AppStore.js";
-import { storage } from "../store/storage.js";
-
-import { GenAI } from '../api/genai.js';
 
 import { Playlist } from './playlist.js';
 import { NowPlaying } from './nowPlaying.js';
 
 export class Player extends Component {
-    constructor() {
+    constructor({ appStore, audioPlayer, healthStore, djService, healthService }) {
         super();
 
         this.state = {
             isPlaying: false,
-            isPaused: false
+            isPaused: false,
+            djIntroSession: null,
+            health: null,
+            disableUI: false
         };
         this.playlist = null;
         this.nowPlaying = null;
 
-        this.gemini = new GenAI();
         this.audioPlayer = audioPlayer;
+        this.djService = djService;
+        this.healthService = healthService;
+
         this.appStore = appStore;
+        this.healthStore = healthStore;
 
         this.onPlayerStateChange = this.onPlayerStateChange.bind(this);
-        this.onSegmentStarted = this.onSegmentStarted.bind(this);
+
+        this.playButton = null;
     }
 
     /** 
      * Init...
     */
     onInit() {
-        this.appStore.hydrate();
+        this.playlist = new Playlist({ appStore: this.appStore, audioPlayer: this.audioPlayer });
+        this.nowPlaying = new NowPlaying({ appStore: this.appStore, audioPlayer: this.audioPlayer });
 
-        this.playlist = new Playlist({ appStore: this.appStore });
-        this.nowPlaying = new NowPlaying({ appStore: this.appStore });
+        this.setState({ health: this.healthStore.getHealthStatus() });
 
         this.appStore.on('player:state', async (isPlaying) => {
             this.onPlayerStateChange(isPlaying);
         });
-        this.appStore.on('segment:started', async (segment) => {
-            this.onSegmentStarted(segment);
+
+        this.healthStore.on('health:change', () => {
+            this.setState({ health: this.healthStore.getHealthStatus() });
+
+            if (!this.healthStore.isAvailable()) {
+                console.warn('DJ voice disabled, fallback mode');
+            }
+        });
+
+        this.appStore.on('disable-ui', (disable) => {
+            this.setState({ disableUI: disable });
         });
     }
 
@@ -62,25 +73,25 @@ export class Player extends Component {
      * Add event listeners for player controls
      */
     bindEvents() {
-        this.$('#play-btn')
-            ?.addEventListener('click', () => this.play());
+        this.playButton = this.$('#play-btn');
+        this.retryCheckHealthButton = this.$('#retry-check-health-btn');
+
+        this.playButton?.addEventListener('click', () => this.play());
+        this.retryCheckHealthButton?.addEventListener('click', () => this.retryCheckHealth());
     }
 
     onPlayerStateChange(isPlaying) {
         this.setState({ isPlaying });
     }
 
-    onSegmentStarted(segment) {
-        console.log("Segment started", segment);
-        // this.nowPlaying.setSegment(segment);
+    retryCheckHealth() {
+        this.healthService.loadHealth();
     }
 
     /**
      * Start the playlist
      */
     async play() {
-        // if (!this.appStore.currentSegmentIndex) return;
-
         if (this.state.isPlaying) {
             this.audioPlayer.pause();
             this.setState({
@@ -99,19 +110,32 @@ export class Player extends Component {
 
         this.setState({ isPlaying: true });
 
-        // If reload, play from the same track, else play from the first track
-        const currentTrack = storage.get("currentTrack");
-        this.audioPlayer.setCurrentIndex(currentTrack?.index || 0);
-        this.audioPlayer.playIndex();
+        // this.playDjIntroSession();
+
+        this.audioPlayer.play();
+    }
+
+    async playDjIntroSession() {
+        if (!this.appStore.djIntroSession) return;
+        if (this.appStore.currentGenreId !== this.appStore.djIntroSession.genreId) return;
+
+        this.appStore.setDisableUI(true);
+        await this.audioPlayer.play(this.appStore.djIntroSession.audioData);
+        this.appStore.setDisableUI(false);
     }
 
     render() {
         return `
             <div class="player">
                 <h1>🎵 Ravvitfy Player</h1>
+
+                <div id="health">
+                    ${this.state.health?.status === 'ok' ? '🟢' : '🔴'}
+                    ${this.state.health?.status === 'error' ? '<button id="retry-check-health-btn">Retry health check</button>' : ''}
+                </div>
                 
                 <div class="player-controls">
-                    <button id="play-btn" class="control-btn">
+                    <button id="play-btn" class="control-btn" ${this.state.disableUI ? 'disabled' : ''}>
                         ${this.state.isPlaying ? '⏸️ Pause' : '▶️ Play'}
                     </button>
 

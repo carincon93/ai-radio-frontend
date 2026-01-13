@@ -1,12 +1,31 @@
 import './style.css';
 import { Player } from './components/player.js';
+import { bootstrap } from './core/bootstrap.js';
 
-// Initialize app
-const app = new Player();
+// Initialize app ONCE
+const {
+  audioPlayer,
+  djService,
+  healthService,
+  healthStore,
+  appStore
+} = bootstrap();
+
+// Mount app
+const app = new Player({
+  audioPlayer,
+  djService,
+  healthService,
+  healthStore,
+  appStore
+});
+
 app.mount('#app');
 
-// Expose to window for debugging in development
+// Dev helpers
 if (import.meta.env.DEV) {
   window.app = app;
-  console.log('🎵 Ravvitfy app initialized. Access via window.app');
+  window.appStore = appStore;
+  window.audioPlayer = audioPlayer;
+  console.log('🎵 Ravvitfy app initialized');
 }

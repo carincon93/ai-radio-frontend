@@ -1,7 +1,6 @@
 import { GoogleGenAI } from "@google/genai"
 
 import { config } from "../config/config.js";
-import { playPCM } from "../utils/playPCM.js";
 
 export class GenAI {
     constructor() {
@@ -10,57 +9,52 @@ export class GenAI {
         });
 
         this.config = config;
-        this.isPlaying = false;
     }
 
     async generateIntroText(prompt) {
-        const transcript = await this.client.models.generateContent({
-            model: this.config.GEMINI_MODEL,
-            contents: prompt,
-        });
+        try {
+            const transcript = await this.client.models.generateContent({
+                model: this.config.GEMINI_MODEL,
+                contents: prompt,
+            });
 
-        return transcript.candidates?.[0]?.content?.parts?.[0]?.text;
+            return transcript.candidates?.[0]?.content?.parts?.[0]?.text;
+        } catch (error) {
+            console.error('Error generating intro text:', error);
+
+            throw error;
+        }
     }
 
     async generateAudio(prompt) {
-        const response = await this.client.models.generateContent({
-            model: this.config.TTS_GEMINI_MODEL,
-            contents: [{
-                parts: [{
-                    text:
+        try {
+            const response = await this.client.models.generateContent({
+                model: this.config.TTS_GEMINI_MODEL,
+                contents: [{
+                    parts: [{
+                        text:
+                            `
+                            Read fast with emotional, energetic, outgoing, entertaining female DJ with a Mexican accent: ${prompt}
                         `
-                            Say it quickly and with emotion like DJ: ${prompt}
-                        `
-                }]
-            }],
-            config: {
-                responseModalities: ['AUDIO'],
-                speechConfig: {
-                    voiceConfig: {
-                        prebuiltVoiceConfig: { voiceName: this.config.TTS_VOICE_NAME }
+                    }]
+                }],
+                config: {
+                    responseModalities: ['AUDIO'],
+                    speechConfig: {
+                        voiceConfig: {
+                            prebuiltVoiceConfig: { voiceName: this.config.TTS_VOICE_NAME }
+                        }
                     }
                 }
-            }
-        });
+            });
 
-        return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+            return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        } catch (error) {
+            console.error('Error generating audio:', error);
+
+            throw error;
+        }
     }
 
-    async play(audioBase64) {
-        this.isPlaying = true;
 
-        await playPCM(audioBase64);
-
-        this.isPlaying = false;
-        this.onEnded?.();
-    }
-
-    pause() {
-        this.isPlaying = false;
-    }
-
-    onFinish(callback) {
-        console.log("finished");
-        this.onEnded = callback;
-    }
 }

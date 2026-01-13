@@ -1,9 +1,7 @@
 import { Component } from "../core/Component.js";
-import { audioPlayer } from "../core/AudioPlayer.js";
-import { storage } from "../store/storage.js";
 
 export class NowPlaying extends Component {
-    constructor({ appStore }) {
+    constructor({ appStore, audioPlayer }) {
         super();
 
         this.state = {
@@ -17,6 +15,8 @@ export class NowPlaying extends Component {
         // Bind methods to preserve 'this' context
         this.onPlayerStateChange = this.onPlayerStateChange.bind(this);
         this.onTrackChange = this.onTrackChange.bind(this);
+
+        this.nextTrackButton = null;
     }
 
     onInit() {
@@ -34,8 +34,9 @@ export class NowPlaying extends Component {
     }
 
     bindEvents() {
-        this.$("#next-track")
-            ?.addEventListener("click", () => this.audioPlayer.next());
+        this.nextTrackButton = this.$("#next-track");
+
+        this.nextTrackButton?.addEventListener("click", () => this.audioPlayer.next());
     }
 
     onPlayerStateChange(isPlaying) {
@@ -44,8 +45,6 @@ export class NowPlaying extends Component {
 
     onTrackChange(track) {
         this.setState({ track });
-        storage.set("currentTrack", track);
-        storage.set("currentSegmentIndex", this.appStore.currentSegmentIndex);
     }
 
     render() {
@@ -53,7 +52,7 @@ export class NowPlaying extends Component {
             <div class="now-playing">
                 ${this.state.isPlaying ? 'Now playing' : 'Stopped'}
                 ${this.state.track ? `
-                    <strong>${this.state.track?.name}</strong><br>
+                    <strong>${this.state.track?.title}</strong><br>
                     <span>${this.state.track?.artistName}</span><br>
                 ` : ''}
                 <button id="next-track">Next track</button>

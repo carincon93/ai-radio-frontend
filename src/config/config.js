@@ -6,6 +6,7 @@ const API_PREFIX = import.meta.env.VITE_API_PREFIX;
 const GEMINI_MODEL = import.meta.env.VITE_GEMINI_MODEL;
 const TTS_GEMINI_MODEL = import.meta.env.VITE_TTS_GEMINI_MODEL;
 const TTS_VOICE_NAME = import.meta.env.VITE_TTS_VOICE_NAME;
+const HEALTH_STORAGE_KEY = import.meta.env.VITE_HEALTH_STORAGE_KEY;
 
 export const config = {
     API_KEY,
@@ -15,5 +16,6 @@ export const config = {
     GEMINI_API_KEY,
     GEMINI_MODEL,
     TTS_GEMINI_MODEL,
-    TTS_VOICE_NAME
+    TTS_VOICE_NAME,
+    HEALTH_STORAGE_KEY
 }

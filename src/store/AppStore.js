@@ -1,119 +1,144 @@
-import { RavvitfyApi } from '../api/ravvitfyApi'
-import { flattenSegments } from '../utils/flattenSegments'
+import { storage } from '../utils/storage.js';
+import { Store } from './Store.js';
 
-class AppStore {
+class AppStore extends Store {
     constructor() {
-        this.ravvitfyApi = new RavvitfyApi();
+        super();
 
         // State
         this.genres = [];
         this.tracks = [];
         this.currentTrack = null;
+        this.currentTrackIndex = null;
+        this.lastDjTrackIndex = null;
         this.currentGenreId = null;
-        this.currentSegmentIndex = null;
-        this.djSession = null;
+        this.djIntroSession = null;
         this.isPlaying = false;
+        this.disableUI = false;
 
         this.loadingPromise = null;
 
-        // Event bus
-        this.listeners = new Map();
+        this.hydrate();
     }
 
-    /* ------------------ INIT ------------------ */
+    async init(djService) {
+        console.log(djService);
 
-    async init() {
-        if (this.loadingPromise) return this.loadingPromise;
+        if (!this.genres.length) {
+            const genres = await djService.getGenres();
+            this.setGenres(genres);
+        }
 
-        this.loadingPromise = (async () => {
-            if (this.genres.length === 0) {
-                this.genres = await this.ravvitfyApi.getGenres();
-            }
-        })();
+        if (this.currentGenreId) {
+            await this.loadSession(this.currentGenreId, djService);
+        }
+    }
 
-        return this.loadingPromise;
+    async loadSession(genreId, djService) {
+        const session = await djService.getDJSessionByGenre(genreId);
+        this.setTracks(session?.tracks ?? []);
     }
 
     /* ------------------ LOCAL STORAGE ------------------ */
 
     hydrate() {
-        this.currentGenreId = localStorage.getItem('currentGenreId');
-        this.currentTrack = localStorage.getItem('currentTrack');
+        this.currentGenreId = storage.get('currentGenreId');
+        this.currentTrack = storage.get('currentTrack');
+        this.currentTrackIndex = this.currentTrack?.index;
+        this.djIntroSession = storage.get('djIntroSession');
+        this.djTrackIntro = storage.get('djTrackIntro');
+        this.lastDjTrackIndex = storage.get('lastDjTrackIndex');
     }
 
     persist() {
-        localStorage.setItem('currentGenreId', this.currentGenreId);
-        localStorage.setItem('currentTrack', this.currentTrack);
-    }
-
-
-    /* ------------------ EVENTS ------------------ */
-
-    on(event, cb) {
-        if (!this.listeners.has(event)) {
-            this.listeners.set(event, new Set());
-        }
-        this.listeners.get(event).add(cb);
-    }
-
-    off(event, cb) {
-        this.listeners.get(event)?.delete(cb);
-    }
-
-    emit(event, payload) {
-        this.listeners.get(event)?.forEach(cb => cb(payload));
+        storage.set('currentGenreId', this.currentGenreId);
+        storage.set('currentTrack', this.currentTrack);
+        storage.set('djIntroSession', this.djIntroSession);
+        storage.set('djTrackIntro', this.djTrackIntro);
+        storage.set('lastDjTrackIndex', this.lastDjTrackIndex);
     }
 
     /* ------------------ ACTIONS ------------------ */
 
-    setCurrentGenre(genreId) {
-        this.currentGenreId = genreId;
-        this.getDJSessionByGenre();
+    resetPlaybackState() {
+        this.currentTrack = null;
+        this.currentTrackIndex = null;
+        this.setPlaying(false);
+    }
 
+    resetDjIntroSession() {
+        this.djIntroSession = null;
+        storage.set('djIntroSession', null);
+    }
+
+    resetDjTrackIntro() {
+        this.djTrackIntro = null;
+        storage.set('djTrackIntro', null);
+    }
+
+    resetGenreState() {
+        this.currentGenreId = null;
+        this.tracks = [];
+    }
+
+    /* ------------------ SETTERS ------------------ */
+
+    setGenres(genres) {
+        this.genres = genres;
+        this.emit('genres:loaded', genres);
+    }
+
+    setCurrentGenre(genreId) {
+        this.resetPlaybackState();
+        this.resetGenreState();
+
+        this.currentGenreId = genreId;
+        this.persist();
+        this.tracks = [];
         this.emit('genre:change', genreId);
     }
 
+    setLastDjTrackIndex(index) {
+        this.lastDjTrackIndex = index;
+        this.persist();
+    }
+
     setCurrentTrack(track) {
-        // Get previous segment index 
-        const previousSegmentIndex = this.currentSegmentIndex;
-
         this.currentTrack = track;
-
-        // Get current segment index
-        this.currentSegmentIndex = track.segmentIndex;
-
-        // Get next segment index
-        const nextSegmentIndex = this.tracks[track.index + 1]?.segmentIndex;
-
-        if (this.currentSegmentIndex !== nextSegmentIndex) {
-            this.emit('segment:started', {
-                segmentIndex: this.currentSegmentIndex,
-                nextSegmentTracks: this.tracks.filter(track => track.segmentIndex === nextSegmentIndex)
-            });
-        }
-
+        this.currentTrackIndex = track.index;
+        this.persist();
         this.emit('track:change', track);
     }
 
     setPlaying(isPlaying) {
         this.isPlaying = isPlaying;
+        this.persist();
         this.emit('player:state', isPlaying);
     }
 
-    async getDJSessionByGenre() {
-        if (!this.currentGenreId) return;
-
-        this.djSession = await this.ravvitfyApi.getSessionByGenre(this.currentGenreId);
-        this.tracks = flattenSegments(this.djSession.djSegments);
-
-        this.emit('playlist:loaded', this.tracks);
+    setTracks(tracks = []) {
+        this.tracks = tracks;
+        this.setCurrentTrack(tracks[0]);
+        this.persist();
+        this.emit('playlist:loaded', tracks);
     }
 
-    async createSession(genreId) {
-        this.djSession = await this.ravvitfyApi.createSession(genreId);
-        this.tracks = flattenSegments(this.djSession.djSegments);
+    setDjIntroSession(payload) {
+        this.djIntroSession = payload;
+        this.persist();
+        this.emit('dj-intro-session:change', payload);
+    }
 
-        this.emit('playlist:loaded', this.tracks);
+    setDjTrackIntro(payload) {
+        this.djTrackIntro = payload;
+        this.lastDjTrackIndex = payload?.trackIndex;
+        this.persist();
+        this.emit('dj-track-intro:change', payload);
+    }
+
+    setDisableUI(disable) {
+        this.disableUI = disable;
+        this.emit('disable-ui', disable);
     }
 }
 
