@@ -26,57 +26,24 @@ export class AudioPlayer {
         });
 
         this.appStore.on('genre:change', () => {
-            this.genreChanged = true;
+            this.stop();
+            this.queue = [];
         });
 
-        this.appStore.on('playlist:loaded', tracks => {
+        this.appStore.on('playlist:loaded', ({ tracks }) => {
             this.loadQueue(tracks);
-
-            if (this.genreChanged) {
-                this.prepareFirstTrack(tracks);
-                this.genreChanged = false;
-            }
-
         });
-    }
-
-    prepareFirstTrack(tracks) {
-        this.stop();
-        if (tracks?.length > 0) {
-            this.setCurrentTrack(tracks[0]);
-        }
     }
 
     loadQueue(tracks) {
         this.queue = tracks;
     }
 
-    async playIndex(trackIndex) {
-        let track = this.queue[trackIndex];
-
-        if (!track && this.appStore.currentTrack && this.appStore.currentTrackIndex === trackIndex) {
-            track = this.appStore.currentTrack;
-        }
-
-        if (!track) return;
-
-        this.setCurrentTrack(track);
-        try {
-            await this.audio.play();
-        } catch (error) {
-            if (error.name !== 'AbortError') {
-                console.error('Playback failed:', error);
-            }
-        }
-
-        if (this.appStore.lastDjTrackIndex === trackIndex) {
-            this.volume(0.2);
-            await this.djService.play(this.appStore.djTrackIntro.audioData);
-            this.fadeVolume(1, 2000);
-        }
-
-        // 🔑 Trigger prefetch logic
-        this.onTrackStart(trackIndex);
+    playIndex(trackIndex) {
+        this.stop();
+        this.setAudioUrl(trackIndex);
+        this.appStore.setCurrentTrackIndex(trackIndex);
+        this.audio.play();
     }
 
     play() {
@@ -91,8 +58,6 @@ export class AudioPlayer {
         const currentTrackIndex = this.appStore.currentTrackIndex;
 
         if (currentTrackIndex != null) {
-            console.log("Enter here 3");
-
             this.playIndex(currentTrackIndex);
             this.appStore.setPlaying(true);
             return;
@@ -114,14 +79,15 @@ export class AudioPlayer {
     }
 
     next() {
-        const currentTrackIndex = this.appStore.currentTrackIndex;
-        const nextIndex = currentTrackIndex + 1;
+        const index = this.appStore.currentTrackIndex;
 
-        if (nextIndex < this.queue.length) {
-            this.playIndex(nextIndex);
-        } else {
+        if (index == null) {
             this.playIndex(0);
+            return;
         }
+
+        const nextIndex = index + 1;
+        this.playIndex(nextIndex < this.queue.length ? nextIndex : 0);
     }
 
     volume(value) {
@@ -146,23 +112,13 @@ export class AudioPlayer {
         fade();
     }
 
-    setCurrentTrack(track) {
+    setAudioUrl(trackIndex) {
+        if (trackIndex == null) return;
+
+        const track = this.queue[trackIndex];
         if (!track) return;
 
-        this.audio.src = `${this.config.API_URL}/uploads/${track?.audioUrl}`;
-        this.appStore.setCurrentTrack(track);
+        this.audio.src = `${this.config.API_URL}/uploads/${track.audioUrl}`;
     }
-
-    onTrackStart(trackIndex) {
-        const prevTrack = this.queue[trackIndex] || null;
-        const nextTrack = this.queue[trackIndex + 1] || null;
-
-        if (!prevTrack || !nextTrack) return;
-
-        if (this.djScheduler.shouldPlayDJTrackIntro({ trackIndex: trackIndex + 1 })) {
-            this.djService.getIntroForTrack({ prevTrack, nextTrack });
-        }
-    }
-
 }
 

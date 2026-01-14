@@ -1,18 +1,14 @@
-export class Store extends EventTarget {
+export class EventBus {
     constructor() {
-        super();
-
-        // Event bus
         this.listeners = new Map();
     }
-
-    /* ------------------ EVENTS ------------------ */
 
     on(event, cb) {
         if (!this.listeners.has(event)) {
             this.listeners.set(event, new Set());
         }
         this.listeners.get(event).add(cb);
+        return () => this.off(event, cb);
     }
 
     off(event, cb) {

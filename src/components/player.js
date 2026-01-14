@@ -4,28 +4,20 @@ import { Playlist } from './playlist.js';
 import { NowPlaying } from './nowPlaying.js';
 
 export class Player extends Component {
-    constructor({ appStore, audioPlayer, healthStore, djService, healthService }) {
+    constructor({ appStore, audioPlayer }) {
         super();
 
+        // Injected dependencies
+        this.appStore = appStore;
+        this.audioPlayer = audioPlayer;
+
+        // Component state
         this.state = {
             isPlaying: false,
-            isPaused: false,
-            djIntroSession: null,
-            health: null,
             disableUI: false
         };
-        this.playlist = null;
-        this.nowPlaying = null;
 
-        this.audioPlayer = audioPlayer;
-        this.djService = djService;
-        this.healthService = healthService;
-
-        this.appStore = appStore;
-        this.healthStore = healthStore;
-
-        this.onPlayerStateChange = this.onPlayerStateChange.bind(this);
-
+        // DOM elements
         this.playButton = null;
     }
 
@@ -33,25 +25,11 @@ export class Player extends Component {
      * Init...
     */
     onInit() {
-        this.playlist = new Playlist({ appStore: this.appStore, audioPlayer: this.audioPlayer });
+        this.playlist = new Playlist({ appStore: this.appStore });
         this.nowPlaying = new NowPlaying({ appStore: this.appStore, audioPlayer: this.audioPlayer });
 
-        this.setState({ health: this.healthStore.getHealthStatus() });
-
-        this.appStore.on('player:state', async (isPlaying) => {
-            this.onPlayerStateChange(isPlaying);
-        });
-
-        this.healthStore.on('health:change', () => {
-            this.setState({ health: this.healthStore.getHealthStatus() });
-
-            if (!this.healthStore.isAvailable()) {
-                console.warn('DJ voice disabled, fallback mode');
-            }
-        });
-
-        this.appStore.on('disable-ui', (disable) => {
-            this.setState({ disableUI: disable });
+        this.appStore.on('player:state', ({ isPlaying }) => {
+            this.setState({ isPlaying });
         });
     }
 
@@ -74,54 +52,27 @@ export class Player extends Component {
      */
     bindEvents() {
         this.playButton = this.$('#play-btn');
-        this.retryCheckHealthButton = this.$('#retry-check-health-btn');
-
         this.playButton?.addEventListener('click', () => this.play());
-        this.retryCheckHealthButton?.addEventListener('click', () => this.retryCheckHealth());
     }
 
-    onPlayerStateChange(isPlaying) {
-        this.setState({ isPlaying });
-    }
-
-    retryCheckHealth() {
-        this.healthService.loadHealth();
-    }
-
-    /**
-     * Start the playlist
-     */
-    async play() {
+    play() {
         if (this.state.isPlaying) {
             this.audioPlayer.pause();
             this.setState({
                 isPlaying: false,
-                isPaused: true
             });
             return;
         } else if (this.state.isPaused) {
             this.audioPlayer.play();
             this.setState({
                 isPlaying: true,
-                isPaused: false
             });
             return;
         }
 
         this.setState({ isPlaying: true });
 
-        // this.playDjIntroSession();
-
         this.audioPlayer.play();
-    }
-
-    async playDjIntroSession() {
-        if (!this.appStore.djIntroSession) return;
-        if (this.appStore.currentGenreId !== this.appStore.djIntroSession.genreId) return;
-
-        this.appStore.setDisableUI(true);
-        await this.audioPlayer.play(this.appStore.djIntroSession.audioData);
-        this.appStore.setDisableUI(false);
     }
 
     render() {
@@ -129,14 +80,9 @@ export class Player extends Component {
             <div class="player">
                 <h1>🎵 Ravvitfy Player</h1>
 
-                <div id="health">
-                    ${this.state.health?.status === 'ok' ? '🟢' : '🔴'}
-                    ${this.state.health?.status === 'error' ? '<button id="retry-check-health-btn">Retry health check</button>' : ''}
-                </div>
-                
                 <div class="player-controls">
-                    <button id="play-btn" class="control-btn" ${this.state.disableUI ? 'disabled' : ''}>
-                        ${this.state.isPlaying ? '⏸️ Pause' : '▶️ Play'}
+                    <button id="play-btn" class="control-btn">
+                       ${this.state.isPlaying ? 'Pause' : 'Play'}
                     </button>
 
                     <div id="now-playing"></div>
