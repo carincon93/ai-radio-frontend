@@ -15,8 +15,10 @@ export class Player extends Component {
         // Component state
         this.state = {
             isPlaying: false,
+            isPaused: false,
             disableUI: false,
             apiHealth: null,
+            qtyTracks: 0,
         };
 
         // DOM elements
@@ -30,8 +32,14 @@ export class Player extends Component {
         this.playlist = new Playlist({ appStore: this.appStore, healthStore: this.healthStore });
         this.nowPlaying = new NowPlaying({ appStore: this.appStore, healthStore: this.healthStore, audioPlayer: this.audioPlayer });
 
+
+        // Listen to incoming events
         this.appStore.on('player:state', ({ isPlaying }) => {
             this.setState({ isPlaying });
+        });
+
+        this.appStore.on('playlist:loaded', ({ tracks }) => {
+            this.setState({ qtyTracks: tracks.length });
         });
 
         this.healthStore.on('health:change', ({ detail }) => {
@@ -76,12 +84,14 @@ export class Player extends Component {
             this.audioPlayer.pause();
             this.setState({
                 isPlaying: false,
+                isPaused: true,
             });
             return;
         } else if (this.state.isPaused) {
             this.audioPlayer.play();
             this.setState({
                 isPlaying: true,
+                isPaused: false,
             });
             return;
         }
@@ -97,8 +107,8 @@ export class Player extends Component {
                 <h1>🎵 Ravvitfy Player</h1>
 
                 <div class="player-controls">
-                    <button id="play-btn" class="control-btn" ${this.state.disableUI ? 'disabled' : ''}>
-                       ${this.state.isPlaying ? 'Pause' : 'Play'}
+                    <button id="play-btn" class="control-btn" ${this.state.disableUI || this.state.qtyTracks === 0 ? 'disabled' : ''}>
+                       ${this.state.isPlaying ? 'Pause' : this.state.isPaused ? 'Resume' : 'Play'}
                     </button>
 
                     <div id="now-playing"></div>

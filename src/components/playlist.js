@@ -3,6 +3,8 @@ import { Component } from '../core/Component.js';
 export class Playlist extends Component {
     constructor({ appStore, healthStore }) {
         super();
+        console.log('Appstore', appStore);
+
         // Injected dependencies
         this.appStore = appStore;
         this.healthStore = healthStore;
@@ -13,7 +15,7 @@ export class Playlist extends Component {
             genres: [],
             tracks: [],
             currentGenreId: null,
-            currentTrack: null
+            currentTrackIndex: null
         }
 
         // DOM elements
@@ -24,19 +26,15 @@ export class Playlist extends Component {
     onInit() {
         // Listening to incoming events
         this.appStore.on('genres:loaded', ({ genres }) =>
-            this.onGenresLoaded(genres)
+            this.setState({ genres })
         );
 
         this.appStore.on('genre:change', ({ genreId }) => {
             this.setState({ currentGenreId: genreId });
         });
 
-        this.appStore.on('track:change', ({ trackIndex }) => {
-            this.setState({ currentTrackIndex: trackIndex });
-        });
-
         this.appStore.on('playlist:loaded', ({ tracks }) => {
-            this.onPlaylistLoaded(tracks);
+            this.setState({ tracks });
         });
 
         this.healthStore.on('health:change', ({ detail }) => {
@@ -45,10 +43,13 @@ export class Playlist extends Component {
             });
         });
 
-        // Set initial state
+        this.appStore.on('track:change', ({ trackIndex }) => {
+            this.setState({ currentTrackIndex: trackIndex });
+        });
+
         this.setState({
-            genres: this.appStore.genres ?? [],
-            tracks: this.appStore.tracks ?? [],
+            currentGenreId: this.appStore.currentGenreId,
+            currentTrackIndex: this.appStore.currentTrackIndex,
         });
     }
 
@@ -62,19 +63,6 @@ export class Playlist extends Component {
 
         this.createSessionButton = this.$('#create-session-btn');
         this.createSessionButton?.addEventListener('click', () => this.createSession());
-    }
-
-    // Event handlers
-    onGenresLoaded(genres) {
-        this.setState({
-            genres,
-            currentGenreId: this.appStore.currentGenreId,
-            currentTrackIndex: this.appStore.currentTrackIndex
-        });
-    }
-
-    onPlaylistLoaded(tracks) {
-        this.setState({ tracks });
     }
 
     handleGenreChange() {
@@ -93,13 +81,12 @@ export class Playlist extends Component {
         return `
             <div class="playlist">
                 This is my playlist.
-                <select id="genre-select" ${this.state.disableUI ? 'disabled' : ''}>
+                <select id="genre-select" ${this.state.disableUI || this.state.genres.length === 0 ? 'disabled' : ''}>
                     <option value="" ${this.state.currentGenreId !== null ? 'disabled' : ''}>Select a genre</option>
                     ${this.state.genres.map(({ id, name }) => `
                         <option ${id === this.state.currentGenreId ? 'selected' : ''} value="${id}">${name}</option>   
                     `)}
                 </select>
-
                 <div class="playlist-container">
                     ${this.state.tracks.map(({ title, artistName, index }) => `
                         <div class="track${this.state.currentTrackIndex === index ? ' active' : ''}" data-track-index="${index}">
