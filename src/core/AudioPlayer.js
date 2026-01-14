@@ -1,11 +1,12 @@
 import { config } from '../config/config.js';
 
 export class AudioPlayer {
-    constructor({ appStore, djService, djScheduler }) {
-        this.config = config;
+    constructor({ appStore, healthStore, djService }) {
+
         this.appStore = appStore;
+        this.healthStore = healthStore;
+
         this.djService = djService;
-        this.djScheduler = djScheduler;
 
         this.audio = new Audio();
         this.listeners = new Set();
@@ -15,6 +16,12 @@ export class AudioPlayer {
 
         this.audio.addEventListener('ended', () => {
             this.next();
+        });
+
+        this.audio.addEventListener('error', (e) => {
+            console.error('Audio playback error:', e);
+            // Optional: Notify user or retry
+            this.healthStore.setHealthStatus('myapi', 'error', e.message);
         });
 
         this.audio.addEventListener('play', () => {
@@ -43,13 +50,19 @@ export class AudioPlayer {
         this.stop();
         this.setAudioUrl(trackIndex);
         this.appStore.setCurrentTrackIndex(trackIndex);
-        this.audio.play();
+        this.audio.play().catch(error => {
+            console.error('Play failed:', error);
+            // Handle specific error types if needed
+            if (error.name === 'NotSupportedError') {
+                console.error('Media format not supported or backend offline');
+            }
+        });
     }
 
     play() {
         // Case 1: audio already loaded (pause → play)
         if (this.audio.src) {
-            this.audio.play();
+            this.audio.play().catch(console.error);
             this.appStore.setPlaying(true);
             return;
         }
@@ -118,7 +131,7 @@ export class AudioPlayer {
         const track = this.queue[trackIndex];
         if (!track) return;
 
-        this.audio.src = `${this.config.API_URL}/uploads/${track.audioUrl}`;
+        this.audio.src = `${config.API_URL}/uploads/${track.audioUrl}`;
     }
 }
 
