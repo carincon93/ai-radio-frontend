@@ -4,17 +4,19 @@ import { Playlist } from './playlist.js';
 import { NowPlaying } from './nowPlaying.js';
 
 export class Player extends Component {
-    constructor({ appStore, audioPlayer }) {
+    constructor({ appStore, healthStore, audioPlayer }) {
         super();
 
         // Injected dependencies
         this.appStore = appStore;
+        this.healthStore = healthStore;
         this.audioPlayer = audioPlayer;
 
         // Component state
         this.state = {
             isPlaying: false,
-            disableUI: false
+            disableUI: false,
+            apiHealth: null,
         };
 
         // DOM elements
@@ -25,11 +27,18 @@ export class Player extends Component {
      * Init...
     */
     onInit() {
-        this.playlist = new Playlist({ appStore: this.appStore });
-        this.nowPlaying = new NowPlaying({ appStore: this.appStore, audioPlayer: this.audioPlayer });
+        this.playlist = new Playlist({ appStore: this.appStore, healthStore: this.healthStore });
+        this.nowPlaying = new NowPlaying({ appStore: this.appStore, healthStore: this.healthStore, audioPlayer: this.audioPlayer });
 
         this.appStore.on('player:state', ({ isPlaying }) => {
             this.setState({ isPlaying });
+        });
+
+        this.healthStore.on('health:change', ({ detail }) => {
+            this.setState({
+                apiHealth: detail.health?.status,
+                disableUI: detail.health?.status !== 'ok' ? true : undefined,
+            });
         });
     }
 
@@ -53,6 +62,13 @@ export class Player extends Component {
     bindEvents() {
         this.playButton = this.$('#play-btn');
         this.playButton?.addEventListener('click', () => this.play());
+
+        this.retryButton = this.$('#retry-btn');
+        this.retryButton?.addEventListener('click', () => this.retry());
+    }
+
+    retry() {
+        this.healthStore.retry();
     }
 
     play() {
@@ -81,11 +97,15 @@ export class Player extends Component {
                 <h1>🎵 Ravvitfy Player</h1>
 
                 <div class="player-controls">
-                    <button id="play-btn" class="control-btn">
+                    <button id="play-btn" class="control-btn" ${this.state.disableUI ? 'disabled' : ''}>
                        ${this.state.isPlaying ? 'Pause' : 'Play'}
                     </button>
 
                     <div id="now-playing"></div>
+                </div>
+
+                <div id="health-status">
+                    ${this.state.apiHealth === 'error' ? '<button id="retry-btn">Retry</button>' : ''}
                 </div>
                 
                 <div id="playlist-container"></div>

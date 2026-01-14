@@ -1,21 +1,31 @@
 import { Component } from "../core/Component.js";
 
 export class NowPlaying extends Component {
-    constructor({ appStore, audioPlayer }) {
+    constructor({ appStore, healthStore, audioPlayer }) {
         super();
 
         // Injected dependencies
         this.appStore = appStore;
+        this.healthStore = healthStore;
         this.audioPlayer = audioPlayer;
 
         // Component state
         this.state = {
             track: null,
-            isPlaying: false
+            isPlaying: false,
+            disableUI: false,
         };
 
         // DOM elements
         this.nextTrackButton = null;
+    }
+
+    onInit() {
+        this.healthStore.on('health:change', ({ detail }) => {
+            this.setState({
+                disableUI: detail.health?.status !== 'ok' ? true : undefined,
+            });
+        });
     }
 
     afterMount() {
@@ -36,7 +46,7 @@ export class NowPlaying extends Component {
     render() {
         return `
             <div class="now-playing">
-                <button id="next-track">Next track</button>
+                <button id="next-track" ${this.state.disableUI ? 'disabled' : ''}>Next track</button>
             </div>
         `;
     }

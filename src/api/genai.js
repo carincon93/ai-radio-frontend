@@ -22,7 +22,7 @@ export class GenAI {
         } catch (error) {
             console.error('Error generating intro text:', error);
 
-            throw error;
+            throw new Error('Error generating intro text');
         }
     }
 
@@ -52,7 +52,7 @@ export class GenAI {
         } catch (error) {
             console.error('Error generating audio:', error);
 
-            throw error;
+            throw new Error('Error generating audio');
         }
     }
 

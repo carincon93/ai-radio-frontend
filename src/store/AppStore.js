@@ -28,16 +28,12 @@ class AppStore extends EventBus {
     }
 
     setCurrentGenre(genreId) {
-        if (genreId === this.currentGenreId) return;
-
         this.currentGenreId = genreId;
         storage.set('currentGenreId', genreId);
         this.emit('genre:change', { genreId });
     }
 
     setCurrentTrackIndex(trackIndex) {
-        if (trackIndex === this.currentTrackIndex) return;
-
         this.currentTrackIndex = trackIndex;
         storage.set('currentTrackIndex', trackIndex);
         this.emit('track:change', { trackIndex });

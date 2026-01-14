@@ -22,14 +22,6 @@ export class MyApi {
         try {
             const response = await fetch(url, config);
 
-            if (!response.ok) {
-                // Determine if we should throw or return something else based on status
-                if (response.status === 404 && options.method === 'GET') {
-                    return null; // or [] depending on context, but null is safer for generic
-                }
-                throw new Error(`API Error: ${response.status} ${response.statusText}`);
-            }
-
             return await response.json();
         } catch (error) {
             console.error(`Request failed for ${endpoint}:`, error);

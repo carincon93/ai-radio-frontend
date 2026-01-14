@@ -1,13 +1,15 @@
 import { Component } from '../core/Component.js';
 
 export class Playlist extends Component {
-    constructor({ appStore }) {
+    constructor({ appStore, healthStore }) {
         super();
         // Injected dependencies
         this.appStore = appStore;
+        this.healthStore = healthStore;
 
         // Component state
         this.state = {
+            disableUI: false,
             genres: [],
             tracks: [],
             currentGenreId: null,
@@ -35,6 +37,12 @@ export class Playlist extends Component {
 
         this.appStore.on('playlist:loaded', ({ tracks }) => {
             this.onPlaylistLoaded(tracks);
+        });
+
+        this.healthStore.on('health:change', ({ detail }) => {
+            this.setState({
+                disableUI: detail.health?.status !== 'ok' ? true : undefined,
+            });
         });
 
         // Set initial state
@@ -85,7 +93,7 @@ export class Playlist extends Component {
         return `
             <div class="playlist">
                 This is my playlist.
-                <select id="genre-select">
+                <select id="genre-select" ${this.state.disableUI ? 'disabled' : ''}>
                     <option value="" ${this.state.currentGenreId !== null ? 'disabled' : ''}>Select a genre</option>
                     ${this.state.genres.map(({ id, name }) => `
                         <option ${id === this.state.currentGenreId ? 'selected' : ''} value="${id}">${name}</option>   

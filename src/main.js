@@ -3,13 +3,13 @@ import { Player } from './components/player.js';
 import { bootstrap } from './core/bootstrap.js';
 
 // Initialize app ONCE
-const { appStore, audioPlayer } = bootstrap();
+const { appStore, healthStore, audioPlayer } = bootstrap();
 
 console.log(appStore);
 console.log(audioPlayer);
 
 // Mount app
-const app = new Player({ appStore, audioPlayer });
+const app = new Player({ appStore, healthStore, audioPlayer });
 
 app.mount('#app');
 
