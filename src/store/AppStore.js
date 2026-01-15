@@ -9,12 +9,18 @@ class AppStore extends EventBus {
         this.tracks = [];
         this.currentGenreId = null;
         this.currentTrackIndex = null;
+        this.djSessionIntro = null;
+        this.djTrackIntro = null;
+        this.lastDjTrackIntroIndex = null;
         this.isPlaying = false;
     }
 
     hydrate() {
         this.currentGenreId = storage.get('currentGenreId');
         this.currentTrackIndex = storage.get('currentTrackIndex');
+        this.djSessionIntro = storage.get('djSessionIntro');
+        this.djTrackIntro = storage.get('djTrackIntro');
+        this.lastDjTrackIntroIndex = storage.get('lastDjTrackIntroIndex');
     }
 
     setGenres(genres) {
@@ -44,6 +50,22 @@ class AppStore extends EventBus {
 
         this.isPlaying = isPlaying;
         this.emit('player:state', { isPlaying });
+    }
+
+    setDjSessionIntro(session) {
+        this.djSessionIntro = session;
+        storage.set('djSessionIntro', session);
+    }
+
+    setDjTrackIntro(djTrackIntro) {
+        this.djTrackIntro = djTrackIntro;
+        storage.set('djTrackIntro', djTrackIntro);
+    }
+
+    setLastDjTrackIntroIndex(trackIndex) {
+        this.lastDjTrackIntroIndex = trackIndex;
+        storage.set('lastDjTrackIntroIndex', trackIndex);
+        this.emit('lastDjTrackIntroIndex:change', { djTrackIntroIndex: trackIndex });
     }
 }
 

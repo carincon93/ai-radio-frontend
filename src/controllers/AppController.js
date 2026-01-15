@@ -1,10 +1,13 @@
 export class AppController {
-    constructor({ appStore, healthStore, djService, healthService, audioPlayer }) {
+    constructor({ appStore, healthStore, djService, healthService, audioPlayer, pcmPlayer }) {
+        this.pcmPlayer = pcmPlayer;
+        this.audioPlayer = audioPlayer;
+
         this.appStore = appStore;
         this.healthStore = healthStore;
+
         this.djService = djService;
         this.healthService = healthService;
-        this.audioPlayer = audioPlayer;
     }
 
     async init() {
@@ -34,6 +37,18 @@ export class AppController {
 
         this.healthStore.on('health:retry', () => {
             this.healthService.loadHealth();
+        });
+
+        this.appStore.on('lastDjTrackIntroIndex:change', ({ djTrackIntroIndex }) => {
+            this.djService.getIntroForTrack({ djTrackIntroIndex });
+        });
+
+        this.appStore.on('track:change', async ({ trackIndex }) => {
+            if (trackIndex === this.appStore.lastDjTrackIntroIndex) {
+                this.audioPlayer.volume(0.2);
+                await this.pcmPlayer.play(this.appStore.djTrackIntro.audioData);
+                this.audioPlayer.fadeVolume(1, 2000);
+            }
         });
     }
 

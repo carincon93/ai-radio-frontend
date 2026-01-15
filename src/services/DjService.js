@@ -45,22 +45,81 @@ export class DjService {
         }
     }
 
-    // async getIntroForTrack(track) {
-    //     if (this.cache.has(track.id)) {
-    //         return this.cache.get(track.id);
-    //     }
+    /**
+     * Get intro for track
+     */
+    async getIntroForTrack({ djTrackIntroIndex }) {
+        // if (this.healthStore.getHealthStatus('genai').status !== 'ok') return null;
 
-    //     const text = await this.genAI.generateIntroText(
-    //         `Introduce la canción ${track.title} de ${track.artistName}`
-    //     );
+        if (this.generating) return null;
+        this.generating = true;
 
-    //     const audio = await this.genAI.generateAudio(text);
+        const prevTrack = this.appStore.tracks[djTrackIntroIndex - 1];
+        const nextTrack = this.appStore.tracks[djTrackIntroIndex];
 
-    //     const payload = { audio, trackId: track.id };
-    //     this.cache.set(track.id, payload);
+        // When reload app and track is the same, do not generate intro
+        if (this.cacheTrack === nextTrack.id) {
+            this.generating = false;
+            return;
+        }
 
-    //     return payload;
-    // }
+        const prompt = `
+            Eres una DJ femenina de radio en vivo con experiencia profesional.
+            Genera una intro para la siguiente canción.
 
+            Tono y estilo:
+            Energético, amigable, natural y fluido, como una locutora de radio moderna.
+            No uses emojis, caracteres especiales, comillas, saltos de línea ni marcas de formato.
+            Texto completamente plano, solo palabras, signos de puntuación y exclamación o pregunta.
 
+            Formato:
+            Una o dos frases como máximo.
+            Máximo 50 palabras en total.
+
+            Contenido:
+            Menciona el nombre del artista o la canción anterior: título: ${prevTrack.title}, artista: ${prevTrack.artistName}.
+            Introduce a la persona con la siguiente canción: título: ${nextTrack.title}, artista: ${nextTrack.artistName}.
+            
+            Ejemplo: "Acabas de escuchar... ahora te traigo..."
+
+            Restricciones:
+            No uses plural. Debe ser en singular, es un oyente individual.
+            No saludes ni despidas, solo habla de la canción.
+            No uses expresiones coloquiales como onda, la pista, qué es lo que pasa, hey qué tal, ni frases de saludo genéricas.
+            No repitas palabras innecesariamente.
+            No incluyas listas ni explicaciones.
+        `;
+
+        const payload = await this.generateDjAudio(prompt, 'dj-track-intro', { trackIndex: nextTrack.index });
+        this.appStore.setDjTrackIntro(payload);
+        this.cacheTrack = nextTrack.id;
+        return payload;
+    }
+
+    /**
+     * Generate DJ audio
+     */
+    async generateDjAudio(prompt, type, args) {
+        try {
+            const script = await this.genAI.generateIntroText(prompt);
+
+            if (!script) return null;
+
+            const audio = await this.genAI.generateAudio(script);
+
+            if (!audio) return null;
+
+            const payload = {
+                ...args,
+                audioData: audio,
+                type: type,
+            };
+
+            return payload;
+        } catch (error) {
+            console.error('Error generating DJ audio:', error);
+            this.healthStore.setHealthStatus('genai', 'error', error?.message || 'GenAI unavailable');
+            throw error;
+        }
+    }
 }

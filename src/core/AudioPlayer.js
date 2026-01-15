@@ -1,12 +1,13 @@
 import { config } from '../config/config.js';
 
 export class AudioPlayer {
-    constructor({ appStore, healthStore, djService }) {
+    constructor({ appStore, healthStore, djService, djScheduler }) {
 
         this.appStore = appStore;
         this.healthStore = healthStore;
 
         this.djService = djService;
+        this.djScheduler = djScheduler;
 
         this.audio = new Audio();
         this.listeners = new Set();
@@ -57,6 +58,9 @@ export class AudioPlayer {
                 console.error('Media format not supported or backend offline');
             }
         });
+
+        // 🔑 Trigger prefetch logic
+        this.onTrackStart(trackIndex);
     }
 
     play() {
@@ -132,6 +136,17 @@ export class AudioPlayer {
         if (!track) return;
 
         this.audio.src = `${config.API_URL}/uploads/${track.audioUrl}`;
+    }
+
+    onTrackStart(trackIndex) {
+        const prevTrack = this.queue[trackIndex] || null;
+        const nextTrack = this.queue[trackIndex + 1] || null;
+
+        if (!prevTrack || !nextTrack) return;
+
+        if (this.djScheduler.shouldPlayDjTrackIntro({ trackIndex: trackIndex + 1 })) {
+            this.appStore.setLastDjTrackIntroIndex(trackIndex + 1);
+        }
     }
 }
 
