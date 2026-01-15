@@ -22,8 +22,6 @@ export class HealthService {
         const saved = storage.get(config.HEALTH_STORAGE_KEY);
         if (saved) this.health = saved;
 
-        console.log(this.health.myapi);
-
         if (this.health.myapi.status !== 'ok') this.checkMyApi();
         // if (this.health.genai.status !== 'ok') this.checkGenAI();
     }

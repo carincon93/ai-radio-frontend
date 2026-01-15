@@ -3,7 +3,6 @@ import { Component } from '../core/Component.js';
 export class Playlist extends Component {
     constructor({ appStore, healthStore }) {
         super();
-        console.log('Appstore', appStore);
 
         // Injected dependencies
         this.appStore = appStore;
