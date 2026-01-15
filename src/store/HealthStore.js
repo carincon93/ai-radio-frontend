@@ -42,8 +42,8 @@ class HealthStore extends EventBus {
         return this.state.status === 'ok';
     }
 
-    getHealthStatus() {
-        return this.state;
+    getHealthStatus(service) {
+        return this.state[service];
     }
 
     setHealthStatus(service, status, message = null) {
