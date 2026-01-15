@@ -7,13 +7,15 @@ export class DjScheduler {
      * Should play DJ intro based on track index
      */
     shouldPlayDjTrackIntro({
-        trackIndex,
+        nextTrackIndex,
         minGap = 2,
-        maxGap = 4,
+        maxGap = 3,
         probability = 0.35
     }) {
-        const lastIndex = this.appStore.lastDjTrackIntroIndex ?? -Infinity;
-        const distance = Math.abs(trackIndex - lastIndex);
+        if (nextTrackIndex === 0) return false;
+
+        const lastIndex = this.appStore.djTrackIntro?.trackIndex ?? -Infinity;
+        const distance = Math.abs(nextTrackIndex - lastIndex);
 
         // Too soon
         if (distance <= minGap) return false;

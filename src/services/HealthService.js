@@ -23,7 +23,7 @@ export class HealthService {
         if (saved) this.health = saved;
 
         if (this.health.myapi.status !== 'ok') this.checkMyApi();
-        // if (this.health.genai.status !== 'ok') this.checkGenAI();
+        if (this.health.genai.status !== 'ok') this.checkGenAI();
     }
 
 
@@ -52,8 +52,8 @@ export class HealthService {
 
     async checkGenAI() {
         await this.safeCheck('genai', async () => {
-            await this.genAI.generateIntroText('Health check');
-            await this.genAI.generateAudio('Health check');
+            await this.genAI.generateIntroText('Hi');
+            await this.genAI.generateAudio('Hi');
         });
     }
 

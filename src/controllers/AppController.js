@@ -29,6 +29,50 @@ export class AppController {
             }
         });
 
+        this.appStore.on('playlist:loaded', () => {
+            if (this.appStore.currentTrackIndex === 0 && this.appStore.djSessionIntro?.currentGenreId !== this.appStore.currentGenreId) {
+                this.djService.getIntroForSession({ tracks: this.appStore.tracks, currentGenreId: this.appStore.currentGenreId });
+            }
+        });
+
+        this.appStore.on('dj-session-intro:change', async ({ currentGenreId }) => {
+            if (!currentGenreId) return;
+            try {
+                const payload = await this.djService.getIntroForSession({ tracks: this.appStore.tracks, currentGenreId });
+                this.appStore.setDjSessionIntro(payload);
+            } catch (error) {
+                this.healthStore.setHealthStatus('genai', 'error', error.message);
+            }
+        });
+
+        this.appStore.on('dj-track-intro:change', async ({ djTrackIntroIndex }) => {
+            if (!djTrackIntroIndex) return;
+            try {
+                const payload = await this.djService.getIntroForTrack({ djTrackIntroIndex });
+                this.appStore.setDjTrackIntro(payload);
+            } catch (error) {
+                this.healthStore.setHealthStatus('genai', 'error', error.message);
+            }
+        });
+
+        this.appStore.on('track:change', async ({ trackIndex }) => {
+            if (!this.appStore.isPlaying) return;
+            if (trackIndex === this.appStore.djTrackIntro?.trackIndex) {
+                this.audioPlayer.volume(0.2);
+                await this.pcmPlayer.play(this.appStore.djTrackIntro.audioData);
+                this.audioPlayer.fadeVolume(1, 1000);
+            }
+        });
+
+        this.appStore.on('player:state', async ({ isPlaying }) => {
+            if (!isPlaying) return;
+            if (this.appStore.currentTrackIndex === 0 && this.appStore.djSessionIntro?.audioData && this.appStore.djSessionIntro?.currentGenreId === this.appStore.currentGenreId) {
+                this.audioPlayer.volume(0.2);
+                await this.pcmPlayer.play(this.appStore.djSessionIntro.audioData);
+                this.audioPlayer.fadeVolume(1, 1000);
+            }
+        });
+
         this.healthStore.on('health:change', ({ detail }) => {
             if (detail.health?.status === 'ok') {
                 this.loadInitialData();
@@ -37,18 +81,6 @@ export class AppController {
 
         this.healthStore.on('health:retry', () => {
             this.healthService.loadHealth();
-        });
-
-        this.appStore.on('lastDjTrackIntroIndex:change', ({ djTrackIntroIndex }) => {
-            this.djService.getIntroForTrack({ djTrackIntroIndex });
-        });
-
-        this.appStore.on('track:change', async ({ trackIndex }) => {
-            if (trackIndex === this.appStore.lastDjTrackIntroIndex) {
-                this.audioPlayer.volume(0.2);
-                await this.pcmPlayer.play(this.appStore.djTrackIntro.audioData);
-                this.audioPlayer.fadeVolume(1, 2000);
-            }
         });
     }
 

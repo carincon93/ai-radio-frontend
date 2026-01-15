@@ -138,14 +138,20 @@ export class AudioPlayer {
         this.audio.src = `${config.API_URL}/uploads/${track.audioUrl}`;
     }
 
-    onTrackStart(trackIndex) {
-        const prevTrack = this.queue[trackIndex] || null;
-        const nextTrack = this.queue[trackIndex + 1] || null;
+    async onTrackStart(trackIndex) {
+        const prevTrack = this.queue[trackIndex - 1] !== undefined ? this.queue[trackIndex - 1] : this.queue[this.queue.length - 1];
+        const nextTrack = this.queue[trackIndex + 1] !== undefined ? this.queue[trackIndex + 1] : this.queue[0];
 
         if (!prevTrack || !nextTrack) return;
 
-        if (this.djScheduler.shouldPlayDjTrackIntro({ trackIndex: trackIndex + 1 })) {
-            this.appStore.setLastDjTrackIntroIndex(trackIndex + 1);
+        // Check if the next track is the first track of the session
+        if (nextTrack.index === 0 && this.appStore.djSessionIntro?.genreId !== this.appStore.currentGenreId) {
+            this.appStore.emit('dj-session-intro:change', { currentGenreId: this.appStore.currentGenreId });
+        }
+
+        // Check if the next track should have an intro. The track index should be greater than 0.
+        if (trackIndex > 0 && this.djScheduler.shouldPlayDjTrackIntro({ nextTrackIndex: trackIndex + 1 }) && nextTrack.index !== 0) {
+            this.appStore.emit('dj-track-intro:change', { djTrackIntroIndex: trackIndex + 1 });
         }
     }
 }
