@@ -42,6 +42,10 @@ export class Player extends Component {
             this.setState({ qtyTracks: tracks.length });
         });
 
+        this.appStore.on('genre:change', () => {
+            this.setState({ isPaused: false, isPlaying: false });
+        });
+
         this.healthStore.on('health:change', ({ detail }) => {
             this.setState({
                 apiHealth: detail.health?.status,
