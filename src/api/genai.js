@@ -34,7 +34,7 @@ export class GenAI {
                     parts: [{
                         text:
                             `
-                            Read fast with emotional, energetic, outgoing, entertaining female DJ with a Mexican accent: ${prompt}
+                            Read fast with emotional, energetic, outgoing, entertaining female DJ with a Mexican accent, spanish language: ${prompt}
                         `
                     }]
                 }],
