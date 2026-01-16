@@ -111,17 +111,20 @@ export class AudioPlayer {
         this.audio.volume = value;
     }
 
-    fadeVolume(targetVolume, duration = 1000) {
+    fadeVolume(targetVolume, duration = 2000) {
         const startVolume = this.audio.volume;
         const startTime = Date.now();
 
         const fade = () => {
             const timeParams = Date.now() - startTime;
-            const progress = Math.min(timeParams / duration, 1);
+            const linearProgress = Math.min(timeParams / duration, 1);
+
+            // SmoothStep easing: t * t * (3 - 2 * t)
+            const progress = linearProgress * linearProgress * (3 - 2 * linearProgress);
 
             this.audio.volume = startVolume + (targetVolume - startVolume) * progress;
 
-            if (progress < 1) {
+            if (linearProgress < 1) {
                 requestAnimationFrame(fade);
             }
         };
@@ -145,7 +148,7 @@ export class AudioPlayer {
         if (!prevTrack || !nextTrack) return;
 
         // Check if the next track is the first track of the session
-        if (nextTrack.index === 0 && this.appStore.djSessionIntro?.genreId !== this.appStore.currentGenreId) {
+        if (nextTrack.index === 0 && this.appStore.djSessionIntro?.currentGenreId !== this.appStore.currentGenreId) {
             this.appStore.emit('dj-session-intro:change', { currentGenreId: this.appStore.currentGenreId });
         }
 
