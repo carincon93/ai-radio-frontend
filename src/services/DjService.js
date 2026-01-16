@@ -1,4 +1,5 @@
 import { flattenSessions } from '../utils/flattenSessions.js';
+import { DJ_SESSION_PROMPT, DJ_TRACK_PROMPT } from '../config/prompts.js';
 
 export class DjService {
     constructor({ genAI, myApi, appStore, healthStore }) {
@@ -9,6 +10,9 @@ export class DjService {
         this.healthStore = healthStore;
 
         this.cache = new Map();
+        this.generating = false;
+        this.cacheGenre = null;
+        this.cacheTrack = null;
     }
 
     async getGenres() {
@@ -54,45 +58,20 @@ export class DjService {
         if (this.generating) return null;
         this.generating = true;
 
-        // When reload app and genre is the same, do not generate intro
-        if (this.cacheGenre && this.cacheGenre === currentGenreId) {
+        try {
+            // When reload app and genre is the same, do not generate intro
+            if (this.cacheGenre && this.cacheGenre === currentGenreId) {
+                return;
+            }
+
+            const prompt = DJ_SESSION_PROMPT(tracks);
+
+            const payload = await this.generateDjAudio(prompt, 'dj-intro', { currentGenreId });
+            this.cacheGenre = currentGenreId;
+            return payload;
+        } finally {
             this.generating = false;
-            return;
         }
-
-        const prompt = `
-            Eres una DJ femenina de radio en vivo con experiencia profesional.
-            Genera una intro para el siguiente sesión musical.
-
-            Tono y estilo:
-            Energético, amigable, natural y fluido, como una locutora de radio moderna.
-            No uses emojis, caracteres especiales, comillas, saltos de línea ni marcas de formato.
-            Texto completamente plano, solo palabras, signos de puntuación y exclamación o pregunta.
-
-            Formato:
-            Una o dos frases como máximo.
-            Máximo 50 palabras en total.
-
-            Contenido:
-            Presenta el sesión con entusiasmo.
-            Menciona brevemente el estilo del género y el tipo de canciones que sonarán.
-            Puedes nombrar uno o dos artistas o canciones si encaja de forma natural.
-
-            Restricciones:
-            No uses plural. Debe ser en singular, es un oyente individual.
-            No saludes ni despidas, solo habla del sesión musical y sus canciones.
-            No uses expresiones coloquiales como onda, la pista, qué es lo que pasa, hey qué tal, ni frases de saludo genéricas.
-            No repitas palabras innecesariamente.
-            No incluyas listas ni explicaciones.
-
-            Introduce a la persona con algunos de los siguientes artistas: ${tracks.map(({ title, artistName }) => 'título: ' + title + ' artista: ' + artistName).join(', ')}.
-        `;
-
-        const payload = await this.generateDjAudio(prompt, 'dj-intro', { currentGenreId });
-
-        this.cacheGenre = currentGenreId;
-        this.generating = false;
-        return payload;
     }
 
     /**
@@ -104,46 +83,23 @@ export class DjService {
         if (this.generating) return null;
         this.generating = true;
 
-        const prevTrack = this.appStore.tracks[djTrackIntroIndex - 1];
-        const nextTrack = this.appStore.tracks[djTrackIntroIndex];
+        try {
+            const prevTrack = this.appStore.tracks[djTrackIntroIndex - 1];
+            const nextTrack = this.appStore.tracks[djTrackIntroIndex];
 
-        // When reload app and track is the same, do not generate intro
-        if (this.cacheTrack === nextTrack.id) {
+            // When reload app and track is the same, do not generate intro
+            if (this.cacheTrack === nextTrack.id) {
+                return;
+            }
+
+            const prompt = DJ_TRACK_PROMPT(prevTrack, nextTrack);
+
+            const payload = await this.generateDjAudio(prompt, 'dj-track-intro', { trackIndex: nextTrack.index, currentGenreId: this.appStore.currentGenreId });
+            this.cacheTrack = nextTrack.id;
+            return payload;
+        } finally {
             this.generating = false;
-            return;
         }
-
-        const prompt = `
-            Eres una DJ femenina de radio en vivo con experiencia profesional.
-            Genera una intro para la siguiente canción.
-
-            Tono y estilo:
-            Energético, amigable, natural y fluido, como una locutora de radio moderna.
-            No uses emojis, caracteres especiales, comillas, saltos de línea ni marcas de formato.
-            Texto completamente plano, solo palabras, signos de puntuación y exclamación o pregunta.
-
-            Formato:
-            Una o dos frases como máximo.
-            Máximo 50 palabras en total.
-
-            Contenido:
-            Menciona el nombre del artista o la canción anterior: título: ${prevTrack.title}, artista: ${prevTrack.artistName}.
-            Introduce a la persona con la siguiente canción: título: ${nextTrack.title}, artista: ${nextTrack.artistName}.
-            
-            Ejemplo: "Acabas de escuchar... ahora te traigo..."
-
-            Restricciones:
-            No uses plural. Debe ser en singular, es un oyente individual.
-            No saludes ni despidas, solo habla de la canción.
-            No uses expresiones coloquiales como onda, la pista, qué es lo que pasa, hey qué tal, ni frases de saludo genéricas.
-            No repitas palabras innecesariamente.
-            No incluyas listas ni explicaciones.
-        `;
-
-        const payload = await this.generateDjAudio(prompt, 'dj-track-intro', { trackIndex: nextTrack.index });
-        this.cacheTrack = nextTrack.id;
-        this.generating = false;
-        return payload;
     }
 
     /**

@@ -44,8 +44,6 @@ class AppStore extends EventBus {
     }
 
     setPlaying(isPlaying) {
-        if (isPlaying === this.isPlaying) return;
-
         this.isPlaying = isPlaying;
         this.emit('player:state', { isPlaying });
     }

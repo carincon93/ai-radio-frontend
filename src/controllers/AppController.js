@@ -29,9 +29,10 @@ export class AppController {
             }
         });
 
-        this.appStore.on('playlist:loaded', () => {
+        this.appStore.on('playlist:loaded', async () => {
             if (this.appStore.currentTrackIndex === 0 && this.appStore.djSessionIntro?.currentGenreId !== this.appStore.currentGenreId) {
-                this.djService.getIntroForSession({ tracks: this.appStore.tracks, currentGenreId: this.appStore.currentGenreId });
+                const payload = await this.djService.getIntroForSession({ tracks: this.appStore.tracks, currentGenreId: this.appStore.currentGenreId });
+                this.appStore.setDjSessionIntro(payload);
             }
         });
 
@@ -56,20 +57,15 @@ export class AppController {
         });
 
         this.appStore.on('track:change', async ({ trackIndex }) => {
-            if (!this.appStore.isPlaying) return;
-            if (trackIndex === this.appStore.djTrackIntro?.trackIndex) {
-                this.audioPlayer.volume(0.2);
-                await this.pcmPlayer.play(this.appStore.djTrackIntro.audioData);
-                this.audioPlayer.fadeVolume(1, 1000);
+            if (trackIndex === this.appStore.djTrackIntro?.trackIndex && this.appStore.currentGenreId === this.appStore.djTrackIntro?.currentGenreId) {
+                await this.playDjAudio(this.appStore.djTrackIntro.audioData);
             }
         });
 
         this.appStore.on('player:state', async ({ isPlaying }) => {
             if (!isPlaying) return;
             if (this.appStore.currentTrackIndex === 0 && this.appStore.djSessionIntro?.audioData && this.appStore.djSessionIntro?.currentGenreId === this.appStore.currentGenreId) {
-                this.audioPlayer.volume(0.2);
-                await this.pcmPlayer.play(this.appStore.djSessionIntro.audioData);
-                this.audioPlayer.fadeVolume(1, 1000);
+                await this.playDjAudio(this.appStore.djSessionIntro.audioData);
             }
         });
 
@@ -82,6 +78,13 @@ export class AppController {
         this.healthStore.on('health:retry', () => {
             this.healthService.loadHealth();
         });
+    }
+
+    async playDjAudio(audioData) {
+        if (!audioData) return;
+        this.audioPlayer.volume(0.2);
+        await this.pcmPlayer.play(audioData);
+        this.audioPlayer.fadeVolume(1, 1000);
     }
 
     async loadInitialData() {
