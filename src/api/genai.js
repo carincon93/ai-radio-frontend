@@ -34,7 +34,8 @@ export class GenAI {
                     parts: [{
                         text:
                             `
-                            Read fast with emotional, energetic, outgoing, entertaining female DJ with a Mexican accent, spanish language: ${prompt}
+                            Fast, energetic female radio DJ voice with excellent Spanish pronunciation and a natural Latin accent.
+                            Emotional, outgoing, entertaining, confident, and lively, with clear articulation and dynamic intonation.: ${prompt}
                         `
                     }]
                 }],
