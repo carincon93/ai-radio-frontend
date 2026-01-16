@@ -111,7 +111,7 @@ export class AudioPlayer {
         this.audio.volume = value;
     }
 
-    fadeVolume(targetVolume, duration = 2000) {
+    fadeVolume(targetVolume, duration = 1000) {
         const startVolume = this.audio.volume;
         const startTime = Date.now();
 

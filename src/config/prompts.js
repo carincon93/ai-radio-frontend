@@ -23,7 +23,7 @@ export const DJ_SESSION_PROMPT = (tracks) => `
     No repitas palabras innecesariamente.
     No incluyas listas ni explicaciones.
 
-    Introduce a la persona con algunos de los siguientes artistas: ${tracks.map(({ title, artistName }) => 'título: ' + title + ' artista: ' + artistName).join(', ')}.
+    Introduce a la persona con los siguientes artistas de la siguiente sesión musical: ${tracks.map(({ artistName }) => ' artista: ' + artistName).join(', ')}.
 `;
 
 export const DJ_TRACK_PROMPT = (prevTrack, nextTrack) => `
