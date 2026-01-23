@@ -1,4 +1,5 @@
 import { Component } from '../core/Component.js';
+import { gsap } from 'gsap';
 
 import { Playlist } from './playlist.js';
 import { NowPlaying } from './nowPlaying.js';
@@ -19,6 +20,7 @@ export class Player extends Component {
             disableUI: false,
             apiHealth: null,
             qtyTracks: 0,
+            disableUI: false,
         };
 
         // DOM elements
@@ -59,8 +61,8 @@ export class Player extends Component {
      */
     afterMount() {
         // Mount child components
-        this.playlist.mount('#playlist-container');
-        this.registerChild(this.playlist);
+        // this.playlist.mount('#playlist-container');
+        // this.registerChild(this.playlist);
 
         this.nowPlaying.mount("#now-playing");
         this.registerChild(this.nowPlaying);
@@ -72,8 +74,32 @@ export class Player extends Component {
      * Add event listeners for player controls
      */
     bindEvents() {
+        this.nextTrackButton = this.$("#next-track");
+        this.nextTrackButton?.addEventListener("click", () => this.playNext());
+
         this.playButton = this.$('#play-btn');
         this.playButton?.addEventListener('click', () => this.play());
+
+        // GSAP Hover Effect
+        [this.playButton, this.nextTrackButton].forEach(btn => {
+            if (btn) {
+                const svg = btn.querySelector('svg');
+
+                btn.addEventListener('mouseenter', () => {
+                    gsap.to(btn, { scale: 1.1, duration: 0.15, ease: 'power2.out' });
+                    if (svg) {
+                        gsap.to(svg, { scale: 1.2, duration: 0.15, delay: 0.1, ease: 'back.out(1.7)' });
+                    }
+                });
+
+                btn.addEventListener('mouseleave', () => {
+                    gsap.to(btn, { scale: 1, duration: 0.15, ease: 'power2.in' });
+                    if (svg) {
+                        gsap.to(svg, { scale: 1, duration: 0.15, ease: 'power2.in' });
+                    }
+                });
+            }
+        });
 
         this.retryButton = this.$('#retry-btn');
         this.retryButton?.addEventListener('click', () => this.retry());
@@ -105,24 +131,38 @@ export class Player extends Component {
         this.audioPlayer.play();
     }
 
+    playNext() {
+        this.audioPlayer.next();
+        this.appStore.setPlaying(true);
+    }
+
     render() {
         return `
             <div class="player">
-                <h1>🎵 Ravvitfy Player</h1>
-
-                <div class="player-controls">
-                    <button id="play-btn" class="control-btn" ${this.state.disableUI || this.state.qtyTracks === 0 ? 'disabled' : ''}>
-                       ${this.state.isPlaying ? 'Pause' : this.state.isPaused ? 'Resume' : 'Play'}
-                    </button>
-
+                <div class="player-content">
+                    
                     <div id="now-playing"></div>
+            
+                    <div class="player-controls">
+                        <button id="play-btn" ${this.state.disableUI || this.state.qtyTracks === 0 ? 'disabled' : ''} class="glass">
+                            ${this.state.isPlaying ? `
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pause-icon lucide-pause"><rect x="14" y="3" width="5" height="18" rx="1"/><rect x="5" y="3" width="5" height="18" rx="1"/></svg>
+                            ` : this.state.isPaused ? `
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play-icon lucide-play"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg>
+                            ` : `
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play-icon lucide-play"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg>
+                            `}
+                        </button>
+
+                        <button id="next-track" ${this.state.disableUI ? 'disabled' : ''} class="glass">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-skip-forward-icon lucide-skip-forward"><path d="M21 4v16"/><path d="M6.029 4.285A2 2 0 0 0 3 6v12a2 2 0 0 0 3.029 1.715l9.997-5.998a2 2 0 0 0 .003-3.432z"/></svg>
+                        </button>
+                    </div>
                 </div>
 
                 <div id="health-status">
                     ${this.state.apiHealth === 'error' ? '<button id="retry-btn">Retry</button>' : ''}
                 </div>
-                
-                <div id="playlist-container"></div>
             </div>
         `;
     }
