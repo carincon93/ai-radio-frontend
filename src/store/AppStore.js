@@ -12,6 +12,7 @@ class AppStore extends EventBus {
         this.djSessionIntro = null;
         this.djTrackIntro = null;
         this.isPlaying = false;
+        this.isDjPlaying = false;
     }
 
     hydrate() {
@@ -26,9 +27,14 @@ class AppStore extends EventBus {
         this.emit('genres:loaded', { genres });
     }
 
+    setArtists(artists) {
+        this.artists = artists;
+        this.emit('artists:loaded', { artists });
+    }
+
     setTracks(tracks) {
         this.tracks = tracks;
-        this.emit('playlist:loaded', { tracks });
+        this.emit('playlist:loaded', { tracks, currentGenreId: this.currentGenreId });
     }
 
     setCurrentGenre(genreId) {
@@ -56,6 +62,11 @@ class AppStore extends EventBus {
     setDjTrackIntro(djTrackIntro) {
         this.djTrackIntro = djTrackIntro;
         storage.set('djTrackIntro', djTrackIntro);
+    }
+
+    setDjPlaying(isDjPlaying) {
+        this.isDjPlaying = isDjPlaying;
+        this.emit('dj:state', { isDjPlaying });
     }
 }
 
