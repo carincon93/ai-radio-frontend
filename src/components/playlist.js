@@ -72,10 +72,6 @@ export class Playlist extends Component {
         this.appStore.setCurrentGenre(genreId);
     }
 
-    createSession() {
-        // this.appStore.createSession(this.appStore.currentGenreId);
-    }
-
     render() {
         return `
             <div class="playlist">
