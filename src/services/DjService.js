@@ -15,11 +15,68 @@ export class DjService {
         this.cacheTrack = null;
     }
 
+    async createSession(genreId) {
+        try {
+            const result = await this.myApi.createSession(genreId);
+            // Refresh tracks after creation
+            await this.loadSessionByGenre(genreId);
+            return result;
+        } catch (e) {
+            this.healthStore.setHealthStatus('myapi', 'error', e.message);
+            throw e;
+        }
+    }
+
     async getGenres() {
         try {
             const genres = await this.myApi.getGenres();
             this.appStore.setGenres(genres);
             return genres;
+        } catch (e) {
+            this.healthStore.setHealthStatus('myapi', 'error', e.message);
+            throw e;
+        }
+    }
+
+    async createGenre(name) {
+        try {
+            const result = await this.myApi.createGenre(name);
+            // Refresh genres after creation
+            await this.getGenres();
+            return result;
+        } catch (e) {
+            this.healthStore.setHealthStatus('myapi', 'error', e.message);
+            throw e;
+        }
+    }
+
+    async createArtist(name, imageFile) {
+        try {
+            const result = await this.myApi.createArtist(name, imageFile);
+            // Refresh artists after creation
+            await this.getArtists();
+            return result;
+        } catch (e) {
+            this.healthStore.setHealthStatus('myapi', 'error', e.message);
+            throw e;
+        }
+    }
+
+    async getArtists() {
+        try {
+            const artists = await this.myApi.getArtists();
+            this.appStore.setArtists(artists);
+            return artists;
+        } catch (e) {
+            this.healthStore.setHealthStatus('myapi', 'error', e.message);
+            throw e;
+        }
+    }
+
+    async createTrack(title, audioFile, genreId, artistIds) {
+        try {
+            const result = await this.myApi.createTrack(title, audioFile, genreId, artistIds);
+            return result;
         } catch (e) {
             this.healthStore.setHealthStatus('myapi', 'error', e.message);
             throw e;
@@ -41,7 +98,9 @@ export class DjService {
         try {
             const session = await this.getDJSessionByGenre(genreId);
             const tracks = flattenSessions(session);
+            this.appStore.setCurrentGenre(genreId);
             this.appStore.setTracks(tracks);
+
             return tracks;
         } catch (e) {
             this.healthStore.setHealthStatus('myapi', 'error', e.message);

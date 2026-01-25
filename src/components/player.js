@@ -3,6 +3,12 @@ import { gsap } from 'gsap';
 
 import { Playlist } from './playlist.js';
 import { NowPlaying } from './nowPlaying.js';
+import { GenreForm } from './forms/genreForm.js';
+import { ArtistForm } from './forms/artistForm.js';
+import { TrackForm } from './forms/trackForm.js';
+import { SessionForm } from './forms/sessionForm.js';
+import { setupDropdownMenu } from './ui/dropdown-menu.js';
+import { setupModal } from './ui/modal.js';
 
 export class Player extends Component {
     constructor({ appStore, healthStore, audioPlayer }) {
@@ -21,6 +27,7 @@ export class Player extends Component {
             apiHealth: null,
             qtyTracks: 0,
             disableUI: false,
+            isDjPlaying: false,
         };
 
         // DOM elements
@@ -33,7 +40,10 @@ export class Player extends Component {
     onInit() {
         this.playlist = new Playlist({ appStore: this.appStore, healthStore: this.healthStore });
         this.nowPlaying = new NowPlaying({ appStore: this.appStore, healthStore: this.healthStore, audioPlayer: this.audioPlayer });
-
+        this.genreForm = new GenreForm({ appStore: this.appStore, healthStore: this.healthStore });
+        this.artistForm = new ArtistForm({ appStore: this.appStore, healthStore: this.healthStore });
+        this.trackForm = new TrackForm({ appStore: this.appStore, healthStore: this.healthStore });
+        this.sessionForm = new SessionForm({ appStore: this.appStore, healthStore: this.healthStore });
 
         // Listen to incoming events
         this.appStore.on('player:state', ({ isPlaying }) => {
@@ -54,6 +64,14 @@ export class Player extends Component {
                 disableUI: detail.health?.status !== 'ok' ? true : undefined,
             });
         });
+
+        this.appStore.on('dj:state', ({ isDjPlaying }) => {
+            this.setState({ isDjPlaying });
+        });
+
+        this.appStore.on('session:not-ready', () => {
+            console.log('Session not ready');
+        })
     }
 
     /**
@@ -67,6 +85,18 @@ export class Player extends Component {
         this.nowPlaying.mount("#now-playing");
         this.registerChild(this.nowPlaying);
 
+        this.genreForm.mount("#genre-form");
+        this.registerChild(this.genreForm);
+
+        this.artistForm.mount("#artist-form");
+        this.registerChild(this.artistForm);
+
+        this.trackForm.mount("#track-form");
+        this.registerChild(this.trackForm);
+
+        this.sessionForm.mount("#session-form");
+        this.registerChild(this.sessionForm);
+
         this.bindEvents();
     }
 
@@ -79,6 +109,16 @@ export class Player extends Component {
 
         this.playButton = this.$('#play-btn');
         this.playButton?.addEventListener('click', () => this.play());
+
+        setupDropdownMenu(this.$('#dropdown-menu-button'), this.$('#dropdown-menu-button-hover'), this.$('#close-dropdown-button'));
+        this.modal = setupModal(this.$('#modal'), this.$('#modal-overlay'), this.$('#modal-content'), [this.$('#add-genre'), this.$('#add-artist'), this.$('#add-track'), this.$('#add-session')], this.$('#close-modal-button'));
+
+        // Close modal on form submit
+        this.appStore.on('genre:create', () => this.modal.close());
+        this.appStore.on('artist:create', () => this.modal.close());
+        this.appStore.on('track:create', () => this.modal.close());
+        this.appStore.on('create-session', () => this.modal.close());
+
 
         // GSAP Hover Effect
         [this.playButton, this.nextTrackButton].forEach(btn => {
@@ -139,12 +179,33 @@ export class Player extends Component {
     render() {
         return `
             <div class="player">
+                <div class="dropdown-menu-wrapper">
+                    <div class="dropdown-menu-button-wrapper">
+                    <button id="dropdown-menu-button" type="button">
+                        <span id="dropdown-menu-button-hover"></span>
+                        <svg xmlns="http://www.w3.org/2000/svg" style="position: relative; z-index: 2;" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-dropdown-icon lucide-dropdown"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h16"/></svg>
+                    </button>
+                    <div class="dropdown-menu-content">
+                        <button id="close-dropdown-button" type="button">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                        </button>
+                        <h1 style="margin-top: 10px;">Actions</h1>
+                        <ul>
+                            <li><button type="button" id="add-genre">Add Genre</button></li>
+                            <li><button type="button" id="add-artist">Add Artist</button></li>
+                            <li><button type="button" id="add-track">Add Track</button></li>
+                            <li><button type="button" id="add-session">Add Session</button></li>
+                        </ul>
+                    </div>
+                    </div>
+                </div>
+
                 <div class="player-content">
                     
                     <div id="now-playing"></div>
             
                     <div class="player-controls">
-                        <button id="play-btn" ${this.state.disableUI || this.state.qtyTracks === 0 ? 'disabled' : ''} class="glass">
+                        <button id="play-btn" ${this.state.disableUI || this.state.isDjPlaying || this.state.qtyTracks === 0 ? 'disabled' : ''} class="glass ${this.state.isDjPlaying ? 'dj-pulse' : this.state.isPlaying ? 'dj-pulse-playing' : ''}">
                             ${this.state.isPlaying ? `
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pause-icon lucide-pause"><rect x="14" y="3" width="5" height="18" rx="1"/><rect x="5" y="3" width="5" height="18" rx="1"/></svg>
                             ` : this.state.isPaused ? `
@@ -154,9 +215,36 @@ export class Player extends Component {
                             `}
                         </button>
 
-                        <button id="next-track" ${this.state.disableUI ? 'disabled' : ''} class="glass">
+                        <button id="next-track" ${this.state.disableUI || this.state.isDjPlaying ? 'disabled' : ''} class="glass ${this.state.isDjPlaying ? 'dj-pulse' : ''}">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-skip-forward-icon lucide-skip-forward"><path d="M21 4v16"/><path d="M6.029 4.285A2 2 0 0 0 3 6v12a2 2 0 0 0 3.029 1.715l9.997-5.998a2 2 0 0 0 .003-3.432z"/></svg>
                         </button>
+                    </div>
+                </div>
+
+                <div id="modal">
+                    <div id="modal-overlay"></div>
+
+                    <div id="modal-content">
+                        <button id="close-modal-button" type="button">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                        </button>
+
+                        <h1>Modal</h1>
+                        <div class="genre-container">
+                            <div id="genre-form"></div>
+                        </div>
+
+                        <div class="artist-container">
+                            <div id="artist-form"></div>
+                        </div>
+
+                        <div class="track-container">
+                            <div id="track-form"></div>
+                        </div>
+
+                        <div class="session-container">
+                            <div id="session-form"></div>
+                        </div>
                     </div>
                 </div>
 
