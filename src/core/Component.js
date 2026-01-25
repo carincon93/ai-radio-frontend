@@ -132,15 +132,20 @@ export class Component {
      * @returns {HTMLElement|null}
      */
     $(selector) {
-        return this.element?.querySelector(selector) || null;
+        if (!this.element) return null;
+        if (this.element.matches(selector)) return this.element;
+        return this.element.querySelector(selector);
     }
 
     /**
      * Helper: Query all elements within component
      * @param {string} selector - CSS selector
-     * @returns {NodeList}
+     * @returns {NodeList|Array}
      */
     $$(selector) {
-        return this.element?.querySelectorAll(selector) || [];
+        if (!this.element) return [];
+        const matches = this.element.matches(selector) ? [this.element] : [];
+        const descendants = Array.from(this.element.querySelectorAll(selector));
+        return matches.concat(descendants);
     }
 }
