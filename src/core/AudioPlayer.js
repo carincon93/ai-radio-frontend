@@ -147,11 +147,6 @@ export class AudioPlayer {
 
         if (!prevTrack || !nextTrack) return;
 
-        // Check if the next track is the first track of the session
-        if (nextTrack.index === 0 && this.appStore.djSessionIntro?.currentGenreId !== this.appStore.currentGenreId) {
-            this.appStore.emit('dj-session-intro:change', { currentGenreId: this.appStore.currentGenreId });
-        }
-
         // Check if the next track should have an intro. The track index should be greater than 0.
         if (trackIndex > 0 && this.djScheduler.shouldPlayDjTrackIntro({ nextTrackIndex: trackIndex + 1 }) && nextTrack.index !== 0) {
             this.appStore.emit('dj-track-intro:change', { djTrackIntroIndex: trackIndex + 1 });
