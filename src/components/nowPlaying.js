@@ -46,7 +46,7 @@ export class NowPlaying extends Component {
             const newTrack = this.appStore.tracks[trackIndex];
             if (this.state.track === newTrack) return;
 
-            const trackImage = this.$('.track-image img');
+            const trackImage = this.$('.track-artwork');
             const trackInfo = this.$('.track-info');
 
             const tl = gsap.timeline({
@@ -78,7 +78,7 @@ export class NowPlaying extends Component {
     afterMount() {
         if (!this.shouldAnimate) return;
 
-        const trackImage = this.$('.track-image img');
+        const trackImage = this.$('.track-artwork');
         const trackInfo = this.$('.track-info');
 
         if (trackImage) {
@@ -103,7 +103,7 @@ export class NowPlaying extends Component {
             <div class="now-playing">
                 <div class="track-image">
                     <div class="track-image-overlay"></div>
-                    ${this.state.track?.artists?.[0]?.imageUrl ? `<img src="${config.API_URL}/uploads/artists/${this.state.track?.artists?.[0]?.imageUrl}" alt="${this.state.track?.title}">` : ''}
+                    ${this.state.track?.artists?.[0]?.imageUrl ? `<div class="track-artwork" style="background-image: url('${config.API_URL}/uploads/artists/${this.state.track?.artists?.[0]?.imageUrl}');"></div>` : ''}
                 </div>
                 <div class="track-info">
                     <div class="track-details">
