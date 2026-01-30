@@ -23,7 +23,13 @@ export class MyApi {
         try {
             const response = await fetch(url, config);
 
-            return await response.json();
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || response.statusText);
+            }
+
+            const text = await response.text();
+            return text ? JSON.parse(text) : null;
         } catch (error) {
             console.error(`Request failed for ${endpoint}:`, error);
             throw error;
@@ -75,6 +81,19 @@ export class MyApi {
             method: 'POST',
             body: formData
         });
+    }
+
+    async removeTrack(trackId) {
+        if (!trackId) return null;
+        return await this._request(`/track/${trackId}`, {
+            method: 'DELETE'
+        });
+    }
+
+    async getTracksByGenre(genreId) {
+        if (!genreId) return null;
+        const data = await this._request(`/track/genre/${genreId}`);
+        return data || [];
     }
 
     async getSessionByGenre(genreId) {

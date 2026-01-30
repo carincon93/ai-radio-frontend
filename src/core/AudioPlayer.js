@@ -65,7 +65,7 @@ export class AudioPlayer {
 
     play() {
         // Case 1: audio already loaded (pause → play)
-        if (this.audio.src) {
+        if (this.audio.getAttribute('src')) {
             this.audio.play().catch(console.error);
             this.appStore.setPlaying(true);
             return;
@@ -92,6 +92,8 @@ export class AudioPlayer {
 
     stop() {
         this.audio.pause();
+        this.audio.removeAttribute('src');
+        this.audio.load();
         this.audio.currentTime = 0;
     }
 
@@ -112,24 +114,45 @@ export class AudioPlayer {
     }
 
     fadeVolume(targetVolume, duration = 1000) {
+        if (this.fadeInterval) {
+            clearInterval(this.fadeInterval);
+        }
+
+        if (document.hidden) {
+            this.volume(targetVolume);
+            return;
+        }
+
         const startVolume = this.audio.volume;
         const startTime = Date.now();
 
-        const fade = () => {
+        this.fadeInterval = setInterval(() => {
             const timeParams = Date.now() - startTime;
             const linearProgress = Math.min(timeParams / duration, 1);
 
             // SmoothStep easing: t * t * (3 - 2 * t)
             const progress = linearProgress * linearProgress * (3 - 2 * linearProgress);
 
-            this.audio.volume = startVolume + (targetVolume - startVolume) * progress;
+            this.volume(startVolume + (targetVolume - startVolume) * progress);
 
-            if (linearProgress < 1) {
-                requestAnimationFrame(fade);
+            if (linearProgress >= 1) {
+                clearInterval(this.fadeInterval);
+                this.fadeInterval = null;
+            }
+        }, 50);
+
+        // Fallback for tab switching
+        const onVisibilityChange = () => {
+            if (!document.hidden) {
+                this.volume(targetVolume);
+                if (this.fadeInterval) {
+                    clearInterval(this.fadeInterval);
+                    this.fadeInterval = null;
+                }
+                document.removeEventListener('visibilitychange', onVisibilityChange);
             }
         };
-
-        fade();
+        document.addEventListener('visibilitychange', onVisibilityChange);
     }
 
     setAudioUrl(trackIndex) {

@@ -83,12 +83,40 @@ export class DjService {
         }
     }
 
+    async removeTrack(trackId) {
+        try {
+            const result = await this.myApi.removeTrack(trackId);
+            this.appStore.setTracks(this.appStore.tracks.filter((track) => track.id !== trackId));
+            return result;
+        } catch (e) {
+            this.healthStore.setHealthStatus('myapi', 'error', e.message);
+            throw e;
+        }
+    }
+
+    async getTracksByGenre(genreId) {
+        if (!genreId) return null;
+        try {
+            const tracks = await this.myApi.getTracksByGenre(genreId);
+            this.appStore.setTracks(tracks);
+            return tracks;
+        } catch (e) {
+            this.healthStore.setHealthStatus('myapi', 'error', e.message);
+            throw e;
+        }
+    }
+
     async getDJSessionByGenre(genreId) {
         if (!genreId) return null;
         try {
             const session = await this.myApi.getSessionByGenre(genreId);
             return session;
         } catch (e) {
+            // if session not found, create a new one
+            if (e.message.includes('not found')) {
+                const session = await this.createSession(genreId);
+                return session;
+            }
             this.healthStore.setHealthStatus('myapi', 'error', e.message);
             throw e;
         }
@@ -98,7 +126,6 @@ export class DjService {
         try {
             const session = await this.getDJSessionByGenre(genreId);
             const tracks = flattenSessions(session);
-            this.appStore.setCurrentGenre(genreId);
             this.appStore.setTracks(tracks);
 
             return tracks;
@@ -112,6 +139,7 @@ export class DjService {
     * Get intro for session
     */
     async getIntroForSession({ tracks, currentGenreId }) {
+        if (!tracks || tracks.length === 0) return;
         if (this.healthStore.getHealthStatus('genai').status !== 'ok') return null;
 
         if (this.generating) return null;
@@ -120,7 +148,7 @@ export class DjService {
         try {
             // When reload app and genre is the same, do not generate intro
             if (this.cacheGenre && this.cacheGenre === currentGenreId) {
-                return;
+                return this.appStore.djSessionIntro;
             }
 
             const prompt = DJ_SESSION_PROMPT(tracks);

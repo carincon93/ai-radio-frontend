@@ -1,6 +1,6 @@
 import gsap from "gsap";
 
-export function setupDropdownMenu(openButton, hoverElement, closeButton) {
+export function setupDropdownMenu(openButton, hoverElement, closeButton, onAction) {
 
     const svg = openButton.querySelector('svg');
     let timeout;
@@ -80,40 +80,9 @@ export function setupDropdownMenu(openButton, hoverElement, closeButton) {
     [closeButton, ...buttons].forEach(button => {
         button.addEventListener("click", () => {
             // Open modal depends on button clicked
-            switch (button.id) {
-                case 'add-genre':
-                    // Open genre modal
-                    document.querySelector('#genre-form').classList.add('active');
-                    // remove active class from other modals
-                    document.querySelector('#artist-form').classList.remove('active');
-                    document.querySelector('#track-form').classList.remove('active');
-                    document.querySelector('#session-form').classList.remove('active');
-                    break;
-                case 'add-artist':
-                    // Open artist modal
-                    document.querySelector('#artist-form').classList.add('active');
-                    // remove active class from other modals
-                    document.querySelector('#genre-form').classList.remove('active');
-                    document.querySelector('#track-form').classList.remove('active');
-                    document.querySelector('#session-form').classList.remove('active');
-                    break;
-                case 'add-track':
-                    // Open track modal
-                    document.querySelector('#track-form').classList.add('active');
-                    // remove active class from other modals
-                    document.querySelector('#genre-form').classList.remove('active');
-                    document.querySelector('#artist-form').classList.remove('active');
-                    document.querySelector('#session-form').classList.remove('active');
-                    break;
-
-                case 'add-session':
-                    // Open session modal
-                    document.querySelector('#session-form').classList.add('active');
-                    // remove active class from other modals
-                    document.querySelector('#genre-form').classList.remove('active');
-                    document.querySelector('#artist-form').classList.remove('active');
-                    document.querySelector('#track-form').classList.remove('active');
-                    break;
+            if (button.id !== 'close-dropdown-button' && onAction) {
+                const formId = button.id.replace('add-', '') + '-form';
+                onAction(formId, button.textContent);
             }
 
             tl.reverse();

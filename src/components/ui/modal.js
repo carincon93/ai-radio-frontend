@@ -1,10 +1,9 @@
 import gsap from "gsap";
 
-export function setupModal(modal, modalOverlay, modalContent, modalButtons, closeModalButton) {
+export function setupModal(modal, modalOverlay, modalContent, modalButtons, closeModalButton, onClose) {
     const tl = gsap.timeline({ paused: true });
 
     const title = modalContent.querySelector('h1');
-
 
     modalButtons.forEach(button => {
         button?.addEventListener("click", () => {
@@ -22,6 +21,9 @@ export function setupModal(modal, modalOverlay, modalContent, modalButtons, clos
             yPercent: 100,
             xPercent: -50,
             ease: 'power2.out',
+            onComplete: () => {
+                if (onClose) onClose();
+            }
         });
 
         gsap.to(modalOverlay, {
@@ -56,5 +58,5 @@ export function setupModal(modal, modalOverlay, modalContent, modalButtons, clos
         stagger: 0.1,
     });
 
-    return { close };
+    return { close, open: () => tl.restart() };
 }

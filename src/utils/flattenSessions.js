@@ -1,5 +1,5 @@
 export function flattenSessions(session) {
-    if (!session.tracks) return [];
+    if (!session || !session.tracks) return [];
     let index = -1;
     return session.tracks.map(
         (track) => {
